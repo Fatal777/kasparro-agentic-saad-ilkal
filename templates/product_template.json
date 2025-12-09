@@ -1,0 +1,86 @@
+{
+    "templateName": "product",
+    "version": "1.0",
+    "requiredFields": [
+        "productName",
+        "concentration",
+        "skinTypes",
+        "keyIngredients",
+        "benefits",
+        "usage",
+        "price"
+    ],
+    "schema": {
+        "productName": {
+            "type": "string",
+            "description": "Name of the product"
+        },
+        "concentration": {
+            "type": "string",
+            "description": "Active ingredient concentration"
+        },
+        "skinTypes": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "Suitable skin types"
+        },
+        "keyIngredients": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "List of key ingredients"
+        },
+        "benefits": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "primary": {
+                    "type": "string"
+                },
+                "count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "usage": {
+            "type": "object",
+            "properties": {
+                "instructions": {
+                    "type": "string"
+                },
+                "frequency": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "string"
+                },
+                "timing": {
+                    "type": "string"
+                }
+            }
+        },
+        "sideEffects": {
+            "type": "string",
+            "description": "Potential side effects"
+        },
+        "price": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "currency": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

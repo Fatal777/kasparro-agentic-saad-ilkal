@@ -1,0 +1,117 @@
+{
+    "templateName": "comparison",
+    "version": "1.0",
+    "requiredFields": [
+        "productA",
+        "productB",
+        "comparison"
+    ],
+    "schema": {
+        "generatedAt": {
+            "type": "string",
+            "format": "iso8601"
+        },
+        "productA": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "concentration": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "benefits": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "ingredients": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "skinTypes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "productB": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "concentration": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "benefits": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "ingredients": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "skinTypes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "comparison": {
+            "type": "object",
+            "properties": {
+                "commonIngredients": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "uniqueToA": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "uniqueToB": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "priceDifference": {
+                    "type": "number"
+                },
+                "cheaperProduct": {
+                    "type": "string"
+                },
+                "recommendation": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

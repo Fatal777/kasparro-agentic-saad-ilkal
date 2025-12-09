@@ -1,0 +1,49 @@
+{
+    "templateName": "faq",
+    "version": "1.0",
+    "requiredFields": [
+        "productName",
+        "faqs"
+    ],
+    "schema": {
+        "productName": {
+            "type": "string",
+            "description": "Name of the product"
+        },
+        "generatedAt": {
+            "type": "string",
+            "format": "iso8601",
+            "description": "Timestamp of generation"
+        },
+        "totalQuestions": {
+            "type": "integer",
+            "description": "Total number of FAQs"
+        },
+        "faqs": {
+            "type": "array",
+            "minItems": 5,
+            "items": {
+                "id": {
+                    "type": "string",
+                    "pattern": "faq-[0-9]{3}"
+                },
+                "category": {
+                    "type": "string",
+                    "enum": [
+                        "informational",
+                        "safety",
+                        "usage",
+                        "purchase",
+                        "comparison"
+                    ]
+                },
+                "question": {
+                    "type": "string"
+                },
+                "answer": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,22 @@
+{
+    "productName": "ClearGlow Niacinamide Serum",
+    "concentration": "5% Niacinamide",
+    "skinType": [
+        "Oily",
+        "Acne-prone"
+    ],
+    "keyIngredients": [
+        "Niacinamide",
+        "Salicylic Acid"
+    ],
+    "benefits": [
+        "Reduces pores",
+        "Controls oil"
+    ],
+    "howToUse": "Apply 3–4 drops morning and evening",
+    "sideEffects": "May cause dryness initially",
+    "price": {
+        "amount": 799,
+        "currency": "INR"
+    }
+}
