@@ -1,89 +1,125 @@
 """
-Parser Agent - Converts raw product data into internal model.
+Parser Agent - Production-grade product data parser.
 
-This agent is responsible for parsing and validating raw product data,
-converting it into a clean internal model structure.
+Converts raw product data into validated internal model with
+type safety, error handling, and logging.
 """
+
+import sys
+from pathlib import Path
+from typing import Optional
+
+# Add project root
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from core.models import ProductModel, Price, AgentResult
+from core.logging import get_agent_logger, log_step
+from core.errors import ValidationError, retry_with_backoff
 
 
 class ParserAgent:
     """
-    Agent for parsing raw product data into structured internal model.
+    Agent for parsing raw product data into validated internal model.
     
-    Responsibility: Convert raw data -> internal model
+    Responsibility: Convert raw data -> validated ProductModel
     Input: dict - Raw product data
-    Output: dict - Structured ProductModel
-    Dependencies: None
+    Output: AgentResult with ProductModel
+    Dependencies: None (first in DAG)
+    
+    Production Features:
+        - Pydantic validation
+        - Structured logging
+        - Error handling with context
     """
+    
+    REQUIRED_FIELDS = ["productName", "keyIngredients", "benefits", "price"]
     
     def __init__(self):
         """Initialize the Parser Agent."""
-        self.required_fields = [
-            "productName",
-            "keyIngredients",
-            "benefits",
-            "price"
-        ]
+        self.logger = get_agent_logger("ParserAgent")
     
-    def process(self, input_data: dict) -> dict:
+    @log_step("parse_product")
+    def process(self, input_data: dict) -> AgentResult:
         """
-        Process raw product data and return structured internal model.
+        Process raw product data and return validated model.
         
         Args:
             input_data: Raw product data dictionary.
             
         Returns:
-            Structured ProductModel dictionary.
-            
-        Raises:
-            ValueError: If required fields are missing.
+            AgentResult with validated ProductModel or error.
         """
-        # Validate required fields
-        missing_fields = [
-            field for field in self.required_fields 
-            if field not in input_data
-        ]
+        self.logger.debug(f"Processing product: {input_data.get('productName', 'unknown')}")
         
-        if missing_fields:
-            return {
-                "success": False,
-                "error": f"Missing required fields: {missing_fields}",
-                "data": None
-            }
+        try:
+            # Step 1: Validate required fields exist
+            self._validate_required_fields(input_data)
+            
+            # Step 2: Normalize data
+            normalized = self._normalize_data(input_data)
+            
+            # Step 3: Create validated Pydantic model
+            product_model = ProductModel(**normalized)
+            
+            self.logger.info(f"Successfully parsed: {product_model.productName}")
+            
+            return AgentResult(
+                success=True,
+                error=None,
+                data=product_model.model_dump()
+            )
+            
+        except ValidationError as e:
+            self.logger.error(f"Validation failed: {e}")
+            return AgentResult(
+                success=False,
+                error=str(e),
+                data=None
+            )
+        except Exception as e:
+            self.logger.error(f"Unexpected error: {e}")
+            return AgentResult(
+                success=False,
+                error=f"Parse error: {str(e)}",
+                data=None
+            )
+    
+    def _validate_required_fields(self, data: dict) -> None:
+        """Validate that required fields are present."""
+        missing = [f for f in self.REQUIRED_FIELDS if f not in data]
         
-        # Build internal model with normalized structure
-        product_model = {
-            "productName": input_data.get("productName", ""),
-            "concentration": input_data.get("concentration", ""),
-            "skinType": self._normalize_list(input_data.get("skinType", [])),
-            "keyIngredients": self._normalize_list(input_data.get("keyIngredients", [])),
-            "benefits": self._normalize_list(input_data.get("benefits", [])),
-            "howToUse": input_data.get("howToUse", ""),
-            "sideEffects": input_data.get("sideEffects", ""),
-            "price": self._normalize_price(input_data.get("price", {}))
-        }
+        if missing:
+            raise ValidationError(
+                f"Missing required fields: {missing}",
+                field=",".join(missing)
+            )
+    
+    def _normalize_data(self, data: dict) -> dict:
+        """Normalize raw data into expected format."""
+        # Handle price normalization
+        price_data = data.get("price", {})
+        if isinstance(price_data, (int, float)):
+            price = Price(amount=price_data, currency="INR")
+        elif isinstance(price_data, dict):
+            price = Price(
+                amount=price_data.get("amount", 0),
+                currency=price_data.get("currency", "INR")
+            )
+        else:
+            price = Price(amount=0, currency="INR")
+        
+        # Handle skin type normalization
+        skin_type = data.get("skinType", [])
+        if isinstance(skin_type, str):
+            skin_type = [skin_type]
         
         return {
-            "success": True,
-            "error": None,
-            "data": product_model
+            "productName": str(data.get("productName", "")).strip(),
+            "concentration": str(data.get("concentration", "")).strip(),
+            "skinType": list(skin_type),
+            "keyIngredients": list(data.get("keyIngredients", [])),
+            "benefits": list(data.get("benefits", [])),
+            "howToUse": str(data.get("howToUse", "")).strip(),
+            "sideEffects": str(data.get("sideEffects", "")).strip(),
+            "price": price
         }
-    
-    def _normalize_list(self, value) -> list:
-        """Ensure value is a list."""
-        if isinstance(value, list):
-            return value
-        if isinstance(value, str):
-            return [value]
-        return []
-    
-    def _normalize_price(self, price_data) -> dict:
-        """Normalize price data structure."""
-        if isinstance(price_data, dict):
-            return {
-                "amount": price_data.get("amount", 0),
-                "currency": price_data.get("currency", "INR")
-            }
-        if isinstance(price_data, (int, float)):
-            return {"amount": price_data, "currency": "INR"}
-        return {"amount": 0, "currency": "INR"}
