@@ -1,6 +1,13 @@
 # Multi-Agent Content Generation System
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-black?style=for-the-badge&logo=vercel)](https://kasparro-agentic.vercel.app)
+[![Backend API](https://img.shields.io/badge/API-Render-46E3B7?style=for-the-badge&logo=render)](https://kasparro-content-api.onrender.com/api/health)
+
+> 🔗 **[View Live Demo →](https://kasparro-agentic.vercel.app)**
+
 A production-grade, modular agentic automation system that takes product datasets and autonomously generates structured, machine-readable content pages.
+
+**Built by [Saad Ilkal](https://github.com/Fatal777)**
 
 ## 🎯 Objective
 

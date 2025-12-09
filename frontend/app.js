@@ -25,8 +25,10 @@ document.addEventListener('DOMContentLoaded', () => {
     initTabs();
     initCategoryFilter();
     initPipelineButton();
-    // Load outputs immediately on page load
-    loadAllOutputs();
+    // Load outputs immediately on page load with a small delay to ensure DOM is ready
+    setTimeout(() => {
+        loadAllOutputs();
+    }, 100);
 });
 
 // Theme Toggle
@@ -153,15 +155,17 @@ async function runPipeline() {
     statusBadge.className = 'console-badge success';
     statusBadge.textContent = 'Completed';
 
-    // Auto-scroll to demo section
-    await sleep(300);
-    document.getElementById('demo').scrollIntoView({ behavior: 'smooth' });
-
-    // Load outputs and scroll to them
+    // Load outputs first
     await loadAllOutputs();
 
-    await sleep(1000);
-    document.getElementById('outputs').scrollIntoView({ behavior: 'smooth' });
+    // Wait a bit then scroll to outputs
+    await sleep(800);
+
+    // Scroll to outputs section
+    const outputsSection = document.getElementById('outputs');
+    if (outputsSection) {
+        outputsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 
     isRunning = false;
     runPipelineBtn.disabled = false;
@@ -213,18 +217,31 @@ function addLogEntry(icon, message, type = 'info') {
 
 // Load All Outputs
 async function loadAllOutputs() {
-    await Promise.all([loadFAQ(), loadProduct(), loadComparison()]);
+    console.log('Loading all outputs...');
+    try {
+        await Promise.all([loadFAQ(), loadProduct(), loadComparison()]);
+        console.log('All outputs loaded successfully');
+    } catch (e) {
+        console.error('Error loading outputs:', e);
+    }
 }
 
 async function loadFAQ() {
-    let data;
+    console.log('Loading FAQ...');
+    let data = null;
+
     try {
         const response = await fetch(`${API_BASE_URL}/outputs/faq`);
-        if (response.ok) data = await response.json();
-    } catch (e) { }
+        if (response.ok) {
+            data = await response.json();
+            console.log('FAQ loaded from API');
+        }
+    } catch (e) {
+        console.log('API not available, using fallback FAQ data');
+    }
 
+    // Always use fallback if no data
     if (!data) {
-        // Fallback data
         data = {
             totalQuestions: 19,
             faqs: [
@@ -240,24 +257,41 @@ async function loadFAQ() {
                 { category: "purchase", question: "Where can I buy it?", answer: "Available from authorized retailers and online stores." }
             ]
         };
+        console.log('Using fallback FAQ data');
     }
 
-    document.getElementById('faq-count').textContent = `${data.totalQuestions} Q&As`;
-    document.getElementById('faq-content').innerHTML = `<div class="faq-list">${data.faqs.map(faq => `
-        <div class="faq-item" data-category="${faq.category}">
-            <div class="faq-category">${faq.category}</div>
-            <div class="faq-question">${faq.question}</div>
-            <div class="faq-answer">${faq.answer}</div>
-        </div>
-    `).join('')}</div>`;
+    const faqCountEl = document.getElementById('faq-count');
+    const faqContentEl = document.getElementById('faq-content');
+
+    if (faqCountEl) {
+        faqCountEl.textContent = `${data.totalQuestions} Q&As`;
+    }
+
+    if (faqContentEl) {
+        faqContentEl.innerHTML = `<div class="faq-list">${data.faqs.map(faq => `
+            <div class="faq-item" data-category="${faq.category}">
+                <div class="faq-category">${faq.category}</div>
+                <div class="faq-question">${faq.question}</div>
+                <div class="faq-answer">${faq.answer}</div>
+            </div>
+        `).join('')}</div>`;
+        console.log('FAQ content rendered');
+    }
 }
 
 async function loadProduct() {
-    let data;
+    console.log('Loading Product...');
+    let data = null;
+
     try {
         const response = await fetch(`${API_BASE_URL}/outputs/product`);
-        if (response.ok) data = await response.json();
-    } catch (e) { }
+        if (response.ok) {
+            data = await response.json();
+            console.log('Product loaded from API');
+        }
+    } catch (e) {
+        console.log('API not available, using fallback Product data');
+    }
 
     if (!data) {
         data = {
@@ -270,29 +304,41 @@ async function loadProduct() {
             sideEffects: "Mild tingling for sensitive skin",
             price: { amount: 699, currency: "INR" }
         };
+        console.log('Using fallback Product data');
     }
 
-    const currency = data.price?.currency === 'INR' ? '₹' : (data.price?.currency || '₹');
-    document.getElementById('product-content').innerHTML = `
-        <div style="display:grid;gap:1.25rem;">
-            <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:700;">${data.productName}</div>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;">
-                <div><span style="opacity:0.6;font-size:0.85rem;">Concentration</span><div style="font-weight:600;">${data.concentration}</div></div>
-                <div><span style="opacity:0.6;font-size:0.85rem;">Price</span><div style="font-weight:700;font-size:1.5rem;">${currency}${data.price?.amount || 699}</div></div>
-            </div>
-            <div><span style="opacity:0.6;font-size:0.85rem;">Skin Types</span><div style="margin-top:0.5rem;">${(data.skinTypes || []).map(t => `<span class="tag">${t}</span>`).join(' ')}</div></div>
-            <div><span style="opacity:0.6;font-size:0.85rem;">Key Ingredients</span><div style="margin-top:0.5rem;">${(data.keyIngredients || []).map(i => `<span class="tag">${i}</span>`).join(' ')}</div></div>
-            <div><span style="opacity:0.6;font-size:0.85rem;">Benefits</span><div style="margin-top:0.5rem;">${(data.benefits?.items || []).map(b => `<span class="tag">${b}</span>`).join(' ')}</div></div>
-            <div><span style="opacity:0.6;font-size:0.85rem;">How to Use</span><div style="margin-top:0.5rem;">${data.usage?.instructions || ''}</div></div>
-        </div>`;
+    const productContentEl = document.getElementById('product-content');
+    if (productContentEl) {
+        const currency = data.price?.currency === 'INR' ? '₹' : (data.price?.currency || '₹');
+        productContentEl.innerHTML = `
+            <div style="display:grid;gap:1.25rem;">
+                <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:700;">${data.productName}</div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;">
+                    <div><span style="opacity:0.6;font-size:0.85rem;">Concentration</span><div style="font-weight:600;">${data.concentration}</div></div>
+                    <div><span style="opacity:0.6;font-size:0.85rem;">Price</span><div style="font-weight:700;font-size:1.5rem;">${currency}${data.price?.amount || 699}</div></div>
+                </div>
+                <div><span style="opacity:0.6;font-size:0.85rem;">Skin Types</span><div style="margin-top:0.5rem;">${(data.skinTypes || []).map(t => `<span class="tag">${t}</span>`).join(' ')}</div></div>
+                <div><span style="opacity:0.6;font-size:0.85rem;">Key Ingredients</span><div style="margin-top:0.5rem;">${(data.keyIngredients || []).map(i => `<span class="tag">${i}</span>`).join(' ')}</div></div>
+                <div><span style="opacity:0.6;font-size:0.85rem;">Benefits</span><div style="margin-top:0.5rem;">${(data.benefits?.items || []).map(b => `<span class="tag">${b}</span>`).join(' ')}</div></div>
+                <div><span style="opacity:0.6;font-size:0.85rem;">How to Use</span><div style="margin-top:0.5rem;">${data.usage?.instructions || ''}</div></div>
+            </div>`;
+        console.log('Product content rendered');
+    }
 }
 
 async function loadComparison() {
-    let data;
+    console.log('Loading Comparison...');
+    let data = null;
+
     try {
         const response = await fetch(`${API_BASE_URL}/outputs/comparison`);
-        if (response.ok) data = await response.json();
-    } catch (e) { }
+        if (response.ok) {
+            data = await response.json();
+            console.log('Comparison loaded from API');
+        }
+    } catch (e) {
+        console.log('API not available, using fallback Comparison data');
+    }
 
     if (!data) {
         data = {
@@ -300,31 +346,36 @@ async function loadComparison() {
             productB: { name: "ClearGlow Niacinamide Serum", price: 799, benefits: ["Reduces pores", "Controls oil"], ingredients: ["Niacinamide", "Salicylic Acid"] },
             comparison: { priceDifference: 100, cheaperProduct: "productA", uniqueToA: ["Vitamin C", "Hyaluronic Acid"], uniqueToB: ["Niacinamide", "Salicylic Acid"], recommendation: "GlowBoost Vitamin C Serum is more affordable by ₹100. GlowBoost focuses on brightening while ClearGlow focuses on pore control." }
         };
+        console.log('Using fallback Comparison data');
     }
 
-    document.getElementById('comparison-content').innerHTML = `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;">
-            <div style="padding:1.5rem;background:var(--bg);border-radius:12px;border:1px solid var(--border);">
-                <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;color:var(--text-secondary);margin-bottom:0.5rem;">Product A</div>
-                <div style="font-weight:700;font-size:1.1rem;margin-bottom:0.5rem;">${data.productA?.name || 'GlowBoost'}</div>
-                <div style="font-size:1.75rem;font-weight:700;margin-bottom:1rem;">₹${data.productA?.price || 699}</div>
-                <div style="font-size:0.85rem;opacity:0.7;">${(data.productA?.benefits || []).join(' • ')}</div>
+    const comparisonContentEl = document.getElementById('comparison-content');
+    if (comparisonContentEl) {
+        comparisonContentEl.innerHTML = `
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;">
+                <div style="padding:1.5rem;background:var(--bg);border-radius:12px;border:1px solid var(--border);">
+                    <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;color:var(--text-secondary);margin-bottom:0.5rem;">Product A</div>
+                    <div style="font-weight:700;font-size:1.1rem;margin-bottom:0.5rem;">${data.productA?.name || 'GlowBoost'}</div>
+                    <div style="font-size:1.75rem;font-weight:700;margin-bottom:1rem;">₹${data.productA?.price || 699}</div>
+                    <div style="font-size:0.85rem;opacity:0.7;">${(data.productA?.benefits || []).join(' • ')}</div>
+                </div>
+                <div style="padding:1.5rem;background:var(--bg);border-radius:12px;border:1px solid var(--border);">
+                    <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;color:var(--text-secondary);margin-bottom:0.5rem;">Product B</div>
+                    <div style="font-weight:700;font-size:1.1rem;margin-bottom:0.5rem;">${data.productB?.name || 'ClearGlow'}</div>
+                    <div style="font-size:1.75rem;font-weight:700;margin-bottom:1rem;">₹${data.productB?.price || 799}</div>
+                    <div style="font-size:0.85rem;opacity:0.7;">${(data.productB?.benefits || []).join(' • ')}</div>
+                </div>
             </div>
             <div style="padding:1.5rem;background:var(--bg);border-radius:12px;border:1px solid var(--border);">
-                <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;color:var(--text-secondary);margin-bottom:0.5rem;">Product B</div>
-                <div style="font-weight:700;font-size:1.1rem;margin-bottom:0.5rem;">${data.productB?.name || 'ClearGlow'}</div>
-                <div style="font-size:1.75rem;font-weight:700;margin-bottom:1rem;">₹${data.productB?.price || 799}</div>
-                <div style="font-size:0.85rem;opacity:0.7;">${(data.productB?.benefits || []).join(' • ')}</div>
-            </div>
-        </div>
-        <div style="padding:1.5rem;background:var(--bg);border-radius:12px;border:1px solid var(--border);">
-            <div style="font-weight:600;margin-bottom:1rem;">📊 Analysis</div>
-            <div style="display:grid;gap:0.75rem;font-size:0.9rem;">
-                <div><span style="opacity:0.6;">Price Difference:</span> <strong>₹${data.comparison?.priceDifference || 100}</strong></div>
-                <div><span style="opacity:0.6;">More Affordable:</span> <strong>${data.comparison?.cheaperProduct === 'productA' ? data.productA?.name : data.productB?.name}</strong></div>
-                <div style="padding-top:0.75rem;border-top:1px solid var(--border);"><span style="opacity:0.6;">Recommendation:</span> ${data.comparison?.recommendation || ''}</div>
-            </div>
-        </div>`;
+                <div style="font-weight:600;margin-bottom:1rem;">📊 Analysis</div>
+                <div style="display:grid;gap:0.75rem;font-size:0.9rem;">
+                    <div><span style="opacity:0.6;">Price Difference:</span> <strong>₹${data.comparison?.priceDifference || 100}</strong></div>
+                    <div><span style="opacity:0.6;">More Affordable:</span> <strong>${data.comparison?.cheaperProduct === 'productA' ? data.productA?.name : data.productB?.name}</strong></div>
+                    <div style="padding-top:0.75rem;border-top:1px solid var(--border);"><span style="opacity:0.6;">Recommendation:</span> ${data.comparison?.recommendation || ''}</div>
+                </div>
+            </div>`;
+        console.log('Comparison content rendered');
+    }
 }
 
 function sleep(ms) {
