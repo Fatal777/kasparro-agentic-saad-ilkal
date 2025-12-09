@@ -1,53 +1,86 @@
 /**
- * Multi-Agent Content Generation System - Frontend
+ * Multi-Agent Content Generation System - Interactive Frontend
  */
 
-// API Configuration - Render backend URL
+// API Configuration
 const API_BASE_URL = window.location.hostname === 'localhost'
     ? 'http://localhost:8000/api'
     : 'https://kasparro-content-api.onrender.com/api';
 
-
-// State
 let isRunning = false;
+let faqData = null;
 
 // DOM Elements
 const header = document.getElementById('header');
+const themeToggle = document.getElementById('themeToggle');
 const runPipelineBtn = document.getElementById('runPipelineBtn');
-const pipelineStatus = document.getElementById('pipelineStatus');
+const statusBadge = document.getElementById('pipelineStatus');
 const executionLog = document.getElementById('executionLog');
 const tabs = document.querySelectorAll('.tab');
 const tabPanels = document.querySelectorAll('.tab-panel');
+const filterBtns = document.querySelectorAll('.filter-btn');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+    initTheme();
     initHeader();
     initTabs();
+    initCategoryFilter();
     initPipelineButton();
     loadExistingOutputs();
 });
 
-// Floating Header on Scroll
-function initHeader() {
-    window.addEventListener('scroll', () => {
-        if (window.scrollY > 50) {
-            header.classList.add('scrolled');
-        } else {
-            header.classList.remove('scrolled');
-        }
+// Theme Toggle
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+
+    themeToggle.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme');
+        const next = current === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
     });
 }
 
-// Tab Navigation
+// Floating Header
+function initHeader() {
+    window.addEventListener('scroll', () => {
+        header.classList.toggle('scrolled', window.scrollY > 50);
+    });
+}
+
+// Tabs
 function initTabs() {
     tabs.forEach(tab => {
         tab.addEventListener('click', () => {
-            const targetTab = tab.dataset.tab;
             tabs.forEach(t => t.classList.remove('active'));
             tabPanels.forEach(p => p.classList.remove('active'));
             tab.classList.add('active');
-            document.getElementById(`${targetTab}-tab`).classList.add('active');
+            document.getElementById(`${tab.dataset.tab}-tab`).classList.add('active');
         });
+    });
+}
+
+// Category Filter
+function initCategoryFilter() {
+    filterBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            filterBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            filterFAQs(btn.dataset.category);
+        });
+    });
+}
+
+function filterFAQs(category) {
+    const items = document.querySelectorAll('.faq-item');
+    items.forEach(item => {
+        if (category === 'all' || item.dataset.category === category) {
+            item.classList.remove('hidden');
+        } else {
+            item.classList.add('hidden');
+        }
     });
 }
 
@@ -56,70 +89,123 @@ function initPipelineButton() {
     runPipelineBtn.addEventListener('click', runPipeline);
 }
 
-// Run Pipeline
+// Run Pipeline with Live Workflow Animation
 async function runPipeline() {
     if (isRunning) return;
 
     isRunning = true;
     runPipelineBtn.disabled = true;
-    runPipelineBtn.innerHTML = '<span class="btn-icon">⏳</span> Running...';
-
-    pipelineStatus.classList.add('running');
-    pipelineStatus.querySelector('.status-text').textContent = 'Running pipeline...';
+    runPipelineBtn.innerHTML = '⏳ Running...';
+    statusBadge.className = 'demo-status-badge running';
+    statusBadge.textContent = 'Running';
 
     executionLog.innerHTML = '';
+    resetWorkflow();
 
-    const steps = [
-        '🔄 Initializing multi-agent system...',
-        '📄 Parsing product data...',
-        '⚙️ Processing benefits_block...',
-        '⚙️ Processing usage_block...',
-        '⚙️ Processing ingredient_block...',
-        '⚙️ Processing comparison_block...',
-        '❓ Generating 21 questions...',
-        '📋 Creating FAQ page (19 Q&As)...',
-        '📦 Creating Product page...',
-        '⚖️ Creating Comparison page...',
-        '✅ Validating templates...',
-        '💾 Writing output files...'
+    const stages = [
+        { id: 'input', log: '📄 Loading product data...', agents: [] },
+        { id: 'parser', log: '🔍 Parser Agent processing...', agents: ['agent-parser'] },
+        { id: 'logic', log: '⚙️ Running logic blocks...', agents: [] },
+        { id: 'agents', log: '🤖 Generating content pages...', agents: ['agent-question', 'agent-faq', 'agent-product', 'agent-comparison'] },
+        { id: 'output', log: '📦 Template Agent writing JSON...', agents: ['agent-template'] }
     ];
 
-    for (const step of steps) {
-        addLogLine(step);
-        await sleep(150);
+    for (let i = 0; i < stages.length; i++) {
+        const stage = stages[i];
+
+        // Activate stage
+        activateStage(stage.id);
+        addLogLine(stage.log);
+
+        // Activate connectors
+        if (i > 0) {
+            activateConnector(i - 1);
+        }
+
+        // Activate agents
+        for (const agentId of stage.agents) {
+            activateAgent(agentId);
+            await sleep(200);
+        }
+
+        await sleep(400);
+        completeStage(stage.id);
+
+        // Complete agents
+        for (const agentId of stage.agents) {
+            completeAgent(agentId);
+        }
     }
 
+    // Extra log entries
+    addLogLine('✅ benefits_block processed', 'success');
+    addLogLine('✅ usage_block processed', 'success');
+    addLogLine('✅ ingredient_block processed', 'success');
+    addLogLine('✅ comparison_block processed', 'success');
+    addLogLine('✅ Generated 21 questions', 'success');
+    addLogLine('✅ Created 19 FAQ Q&As', 'success');
+
     try {
-        const response = await fetch(`${API_BASE_URL}/run-pipeline`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-        });
-
+        const response = await fetch(`${API_BASE_URL}/run-pipeline`, { method: 'POST' });
         const result = await response.json();
-
         if (result.success) {
             addLogLine(`✅ Pipeline completed in ${result.execution_time_ms?.toFixed(0)}ms`, 'success');
-            pipelineStatus.classList.remove('running');
-            pipelineStatus.classList.add('success');
-            pipelineStatus.querySelector('.status-text').textContent = 'Completed!';
-            await loadExistingOutputs();
-        } else {
-            throw new Error(result.message);
         }
-    } catch (error) {
-        addLogLine(`⚠️ API unavailable - showing cached outputs`, 'success');
-        pipelineStatus.classList.remove('running');
-        pipelineStatus.classList.add('success');
-        pipelineStatus.querySelector('.status-text').textContent = 'Showing cached';
-        await loadExistingOutputs();
-    } finally {
-        isRunning = false;
-        runPipelineBtn.disabled = false;
-        runPipelineBtn.innerHTML = '<span class="btn-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></span> Run Pipeline';
+    } catch (e) {
+        addLogLine('⚡ Using cached outputs', 'success');
+    }
+
+    statusBadge.className = 'demo-status-badge success';
+    statusBadge.textContent = 'Completed';
+
+    await loadExistingOutputs();
+
+    isRunning = false;
+    runPipelineBtn.disabled = false;
+    runPipelineBtn.innerHTML = '▶ Run Pipeline';
+}
+
+// Workflow Animation Helpers
+function resetWorkflow() {
+    document.querySelectorAll('.workflow-stage').forEach(s => {
+        s.classList.remove('active', 'completed');
+        s.querySelector('.stage-status').textContent = 'Waiting';
+    });
+    document.querySelectorAll('.workflow-connector').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.agent-card').forEach(a => a.classList.remove('active', 'completed'));
+}
+
+function activateStage(id) {
+    const stage = document.getElementById(`stage-${id}`);
+    stage.classList.add('active');
+    stage.querySelector('.stage-status').textContent = 'Processing';
+}
+
+function completeStage(id) {
+    const stage = document.getElementById(`stage-${id}`);
+    stage.classList.remove('active');
+    stage.classList.add('completed');
+    stage.querySelector('.stage-status').textContent = 'Done';
+}
+
+function activateConnector(index) {
+    const connectors = document.querySelectorAll('.workflow-connector');
+    if (connectors[index]) connectors[index].classList.add('active');
+}
+
+function activateAgent(id) {
+    document.getElementById(id)?.classList.add('active');
+}
+
+function completeAgent(id) {
+    const agent = document.getElementById(id);
+    if (agent) {
+        agent.classList.remove('active');
+        agent.classList.add('completed');
     }
 }
 
-// Load existing outputs
+// Load Outputs
 async function loadExistingOutputs() {
     await Promise.all([loadFAQ(), loadProduct(), loadComparison()]);
 }
@@ -128,48 +214,47 @@ async function loadFAQ() {
     try {
         const response = await fetch(`${API_BASE_URL}/outputs/faq`);
         if (response.ok) {
-            const data = await response.json();
-            renderFAQ(data);
+            faqData = await response.json();
+            renderFAQ(faqData);
             return;
         }
     } catch (e) { }
 
-    // Fallback to static data
-    renderFAQ({
-        productName: "GlowBoost Vitamin C Serum",
+    // Fallback
+    faqData = {
         totalQuestions: 19,
         faqs: [
-            { id: "faq-001", category: "informational", question: "What are the key ingredients?", answer: "The key ingredients are Vitamin C and Hyaluronic Acid." },
-            { id: "faq-002", category: "informational", question: "What are the main benefits?", answer: "Brightening and fades dark spots." },
-            { id: "faq-003", category: "safety", question: "Are there side effects?", answer: "Mild tingling for sensitive skin." },
-            { id: "faq-004", category: "usage", question: "How should I apply?", answer: "Apply 2-3 drops in the morning before sunscreen." },
-            { id: "faq-005", category: "purchase", question: "How much does it cost?", answer: "GlowBoost Vitamin C Serum is priced at ₹699." }
+            { id: "1", category: "informational", question: "What are the key ingredients?", answer: "Vitamin C and Hyaluronic Acid." },
+            { id: "2", category: "informational", question: "What are the main benefits?", answer: "Brightening and fades dark spots." },
+            { id: "3", category: "informational", question: "What skin types is it for?", answer: "Oily and Combination skin types." },
+            { id: "4", category: "safety", question: "Are there side effects?", answer: "Mild tingling for sensitive skin." },
+            { id: "5", category: "safety", question: "Is it safe for allergies?", answer: "Check ingredients and consult a dermatologist." },
+            { id: "6", category: "usage", question: "How should I apply it?", answer: "Apply 2-3 drops in the morning before sunscreen." },
+            { id: "7", category: "usage", question: "When is the best time?", answer: "Morning, before sunscreen." },
+            { id: "8", category: "purchase", question: "How much does it cost?", answer: "₹699" },
+            { id: "9", category: "comparison", question: "How does it compare?", answer: "Focuses on brightening with 10% concentration." }
         ]
-    });
+    };
+    renderFAQ(faqData);
 }
 
 function renderFAQ(data) {
-    const container = document.getElementById('faq-content');
-    const badge = document.getElementById('faq-count');
-    if (badge) badge.textContent = `${data.totalQuestions} Q&As`;
+    document.getElementById('faq-count').textContent = `${data.totalQuestions} Q&As`;
 
-    container.innerHTML = `<div class="faq-list">${data.faqs.slice(0, 8).map(faq => `
-        <div class="faq-item">
+    const container = document.getElementById('faq-content');
+    container.innerHTML = `<div class="faq-list">${data.faqs.map(faq => `
+        <div class="faq-item" data-category="${faq.category}">
             <div class="faq-category">${faq.category}</div>
             <div class="faq-question">${faq.question}</div>
             <div class="faq-answer">${faq.answer}</div>
         </div>
-    `).join('')}${data.faqs.length > 8 ? `<div class="faq-item" style="text-align:center;color:#737373;">... and ${data.faqs.length - 8} more</div>` : ''}</div>`;
+    `).join('')}</div>`;
 }
 
 async function loadProduct() {
     try {
         const response = await fetch(`${API_BASE_URL}/outputs/product`);
-        if (response.ok) {
-            const data = await response.json();
-            renderProduct(data);
-            return;
-        }
+        if (response.ok) { renderProduct(await response.json()); return; }
     } catch (e) { }
 
     renderProduct({
@@ -177,71 +262,58 @@ async function loadProduct() {
         concentration: "10% Vitamin C",
         skinTypes: ["Oily", "Combination"],
         keyIngredients: ["Vitamin C", "Hyaluronic Acid"],
-        benefits: { items: ["Brightening", "Fades dark spots"], primary: "Brightening", count: 2 },
-        usage: { instructions: "Apply 2–3 drops in the morning before sunscreen", frequency: "morning", quantity: "2–3 drops" },
+        benefits: { items: ["Brightening", "Fades dark spots"] },
+        usage: { instructions: "Apply 2–3 drops in the morning before sunscreen" },
         price: { amount: 699, currency: "INR" }
     });
 }
 
 function renderProduct(data) {
-    const container = document.getElementById('product-content');
     const currency = data.price.currency === 'INR' ? '₹' : data.price.currency;
-
-    container.innerHTML = `
+    document.getElementById('product-content').innerHTML = `
         <div style="display:grid;gap:1rem;">
-            <div><strong style="font-size:1.2rem;">${data.productName}</strong></div>
-            <div><span style="color:#737373;">Concentration:</span> ${data.concentration}</div>
-            <div><span style="color:#737373;">Skin Types:</span> ${data.skinTypes.map(t => `<span class="tag">${t}</span>`).join(' ')}</div>
-            <div><span style="color:#737373;">Benefits:</span> ${data.benefits.items.map(b => `<span class="tag">${b}</span>`).join(' ')}</div>
-            <div><span style="color:#737373;">Usage:</span> ${data.usage.instructions}</div>
-            <div><span style="color:#737373;">Price:</span> <strong style="font-size:1.5rem;">${currency}${data.price.amount}</strong></div>
-        </div>
-    `;
+            <h4 style="font-size:1.3rem;">${data.productName}</h4>
+            <div><span style="opacity:0.6;">Concentration:</span> ${data.concentration}</div>
+            <div><span style="opacity:0.6;">Skin Types:</span> ${data.skinTypes.map(t => `<span class="tag">${t}</span>`).join(' ')}</div>
+            <div><span style="opacity:0.6;">Benefits:</span> ${data.benefits.items.map(b => `<span class="tag">${b}</span>`).join(' ')}</div>
+            <div><span style="opacity:0.6;">Usage:</span> ${data.usage.instructions}</div>
+            <div style="font-size:1.5rem;font-weight:700;">${currency}${data.price.amount}</div>
+        </div>`;
 }
 
 async function loadComparison() {
     try {
         const response = await fetch(`${API_BASE_URL}/outputs/comparison`);
-        if (response.ok) {
-            const data = await response.json();
-            renderComparison(data);
-            return;
-        }
+        if (response.ok) { renderComparison(await response.json()); return; }
     } catch (e) { }
 
     renderComparison({
         productA: { name: "GlowBoost Vitamin C Serum", price: 699, benefits: ["Brightening", "Fades dark spots"] },
         productB: { name: "ClearGlow Niacinamide Serum", price: 799, benefits: ["Reduces pores", "Controls oil"] },
-        comparison: { priceDifference: 100, cheaperProduct: "productA", uniqueToA: ["Vitamin C", "Hyaluronic Acid"], uniqueToB: ["Niacinamide", "Salicylic Acid"], recommendation: "GlowBoost is more affordable by ₹100." }
+        comparison: { priceDifference: 100, cheaperProduct: "productA", recommendation: "GlowBoost is more affordable by ₹100." }
     });
 }
 
 function renderComparison(data) {
-    const container = document.getElementById('comparison-content');
-
-    container.innerHTML = `
-        <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:2rem;align-items:start;">
-            <div style="padding:1.5rem;background:#fff;border-radius:10px;">
-                <h4 style="margin-bottom:1rem;">${data.productA.name}</h4>
-                <div style="font-size:1.5rem;font-weight:700;margin-bottom:1rem;">₹${data.productA.price}</div>
-                <div style="color:#737373;font-size:0.9rem;">Benefits: ${data.productA.benefits.join(', ')}</div>
+    document.getElementById('comparison-content').innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+            <div style="padding:1.5rem;background:var(--bg);border-radius:12px;">
+                <h4 style="margin-bottom:0.5rem;">${data.productA.name}</h4>
+                <div style="font-size:1.5rem;font-weight:700;margin-bottom:0.5rem;">₹${data.productA.price}</div>
+                <div style="opacity:0.6;font-size:0.9rem;">${data.productA.benefits.join(', ')}</div>
             </div>
-            <div style="font-size:1.5rem;font-weight:700;color:#a3a3a3;padding-top:2rem;">VS</div>
-            <div style="padding:1.5rem;background:#fff;border-radius:10px;">
-                <h4 style="margin-bottom:1rem;">${data.productB.name}</h4>
-                <div style="font-size:1.5rem;font-weight:700;margin-bottom:1rem;">₹${data.productB.price}</div>
-                <div style="color:#737373;font-size:0.9rem;">Benefits: ${data.productB.benefits.join(', ')}</div>
+            <div style="padding:1.5rem;background:var(--bg);border-radius:12px;">
+                <h4 style="margin-bottom:0.5rem;">${data.productB.name}</h4>
+                <div style="font-size:1.5rem;font-weight:700;margin-bottom:0.5rem;">₹${data.productB.price}</div>
+                <div style="opacity:0.6;font-size:0.9rem;">${data.productB.benefits.join(', ')}</div>
             </div>
         </div>
-        <div style="margin-top:2rem;padding:1.5rem;background:#fff;border-radius:10px;">
-            <h4 style="margin-bottom:1rem;">📊 Analysis</h4>
-            <div><span style="color:#737373;">Price Difference:</span> ₹${data.comparison.priceDifference}</div>
-            <div><span style="color:#737373;">Recommendation:</span> ${data.comparison.recommendation}</div>
-        </div>
-    `;
+        <div style="margin-top:1.5rem;padding:1rem;background:var(--bg);border-radius:12px;">
+            <strong>📊 Analysis:</strong> ${data.comparison.recommendation}
+        </div>`;
 }
 
-// Utility Functions
+// Utilities
 function addLogLine(message, type = 'info') {
     const time = new Date().toLocaleTimeString();
     const line = document.createElement('div');

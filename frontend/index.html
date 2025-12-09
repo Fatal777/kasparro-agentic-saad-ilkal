@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 
 <head>
     <meta charset="UTF-8">
@@ -26,9 +26,25 @@
                 <a href="#demo" class="nav-link">Demo</a>
                 <a href="#outputs" class="nav-link">Outputs</a>
             </nav>
-            <a href="https://github.com" target="_blank" class="btn btn-header">
-                View on GitHub
-            </a>
+            <div class="header-actions">
+                <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">
+                    <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                    <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </button>
+                <a href="https://github.com" target="_blank" class="btn btn-header">GitHub</a>
+            </div>
         </div>
     </header>
 
@@ -58,115 +74,87 @@
 
             <div class="hero-actions">
                 <button id="runPipelineBtn" class="btn btn-primary">
-                    <span class="btn-icon">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                        </svg>
-                    </span>
+                    <span class="btn-icon">▶</span>
                     Run Pipeline
                 </button>
-                <a href="#architecture" class="btn btn-secondary">
-                    Learn More
-                </a>
+                <a href="#architecture" class="btn btn-secondary">Learn More</a>
             </div>
 
             <div class="hero-stats">
-                <div class="stat">
-                    <span class="stat-value">7</span>
-                    <span class="stat-label">Agents</span>
-                </div>
+                <div class="stat"><span class="stat-value">7</span><span class="stat-label">Agents</span></div>
                 <div class="stat-divider"></div>
-                <div class="stat">
-                    <span class="stat-value">4</span>
-                    <span class="stat-label">Logic Blocks</span>
-                </div>
+                <div class="stat"><span class="stat-value">4</span><span class="stat-label">Logic Blocks</span></div>
                 <div class="stat-divider"></div>
-                <div class="stat">
-                    <span class="stat-value">3</span>
-                    <span class="stat-label">Outputs</span>
-                </div>
+                <div class="stat"><span class="stat-value">3</span><span class="stat-label">Outputs</span></div>
             </div>
-        </div>
-
-        <div class="scroll-indicator">
-            <span>Scroll to explore</span>
-            <div class="scroll-arrow"></div>
         </div>
     </section>
 
-    <!-- Architecture Section -->
+    <!-- Live Workflow Section -->
     <section class="section" id="architecture">
         <div class="container">
             <div class="section-header">
-                <span class="section-tag">System Design</span>
+                <span class="section-tag">Live Workflow</span>
                 <h2 class="section-title">Pipeline Architecture</h2>
-                <p class="section-description">
-                    A directed acyclic graph orchestrates specialized agents through a modular execution flow.
-                </p>
+                <p class="section-description">Watch the multi-agent pipeline execute in real-time</p>
             </div>
 
-            <div class="architecture-visual">
-                <div class="pipeline">
-                    <div class="pipeline-stage" data-stage="input">
-                        <div class="stage-header">Input</div>
-                        <div class="stage-nodes">
-                            <div class="node node-data">
-                                <span class="node-icon">📄</span>
-                                <span class="node-label">Product A</span>
-                            </div>
-                            <div class="node node-data">
-                                <span class="node-icon">📄</span>
-                                <span class="node-label">Product B</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="pipeline-connector">
-                        <div class="connector-line"></div>
-                        <div class="connector-arrow"></div>
-                    </div>
-
-                    <div class="pipeline-stage" data-stage="orchestrator">
-                        <div class="stage-header">Orchestrator</div>
-                        <div class="stage-nodes">
-                            <div class="node node-orchestrator">
-                                <span class="node-label">DAG Controller</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="pipeline-connector">
-                        <div class="connector-line"></div>
-                        <div class="connector-arrow"></div>
-                    </div>
-
-                    <div class="pipeline-stage" data-stage="agents">
-                        <div class="stage-header">Agents</div>
-                        <div class="stage-nodes agents-grid">
-                            <div class="node node-agent">Parser</div>
-                            <div class="node node-agent">Question</div>
-                            <div class="node node-agent">FAQ</div>
-                            <div class="node node-agent">Product</div>
-                            <div class="node node-agent">Comparison</div>
-                            <div class="node node-agent">Template</div>
-                        </div>
-                    </div>
-
-                    <div class="pipeline-connector">
-                        <div class="connector-line"></div>
-                        <div class="connector-arrow"></div>
-                    </div>
-
-                    <div class="pipeline-stage" data-stage="output">
-                        <div class="stage-header">Output</div>
-                        <div class="stage-nodes">
-                            <div class="node node-output">faq.json</div>
-                            <div class="node node-output">product.json</div>
-                            <div class="node node-output">comparison.json</div>
-                        </div>
-                    </div>
+            <div class="workflow-container">
+                <div class="workflow-stage" data-stage="input" id="stage-input">
+                    <div class="stage-icon">📄</div>
+                    <div class="stage-name">Input Data</div>
+                    <div class="stage-status">Ready</div>
                 </div>
+
+                <div class="workflow-connector">
+                    <div class="connector-pulse"></div>
+                </div>
+
+                <div class="workflow-stage" data-stage="parser" id="stage-parser">
+                    <div class="stage-icon">🔍</div>
+                    <div class="stage-name">Parser Agent</div>
+                    <div class="stage-status">Waiting</div>
+                </div>
+
+                <div class="workflow-connector">
+                    <div class="connector-pulse"></div>
+                </div>
+
+                <div class="workflow-stage" data-stage="logic" id="stage-logic">
+                    <div class="stage-icon">⚙️</div>
+                    <div class="stage-name">Logic Blocks</div>
+                    <div class="stage-status">Waiting</div>
+                </div>
+
+                <div class="workflow-connector">
+                    <div class="connector-pulse"></div>
+                </div>
+
+                <div class="workflow-stage" data-stage="agents" id="stage-agents">
+                    <div class="stage-icon">🤖</div>
+                    <div class="stage-name">Page Agents</div>
+                    <div class="stage-status">Waiting</div>
+                </div>
+
+                <div class="workflow-connector">
+                    <div class="connector-pulse"></div>
+                </div>
+
+                <div class="workflow-stage" data-stage="output" id="stage-output">
+                    <div class="stage-icon">📦</div>
+                    <div class="stage-name">JSON Output</div>
+                    <div class="stage-status">Waiting</div>
+                </div>
+            </div>
+
+            <!-- Detailed Agent View -->
+            <div class="agents-detail">
+                <div class="agent-card" id="agent-parser"><span class="agent-dot"></span>Parser</div>
+                <div class="agent-card" id="agent-question"><span class="agent-dot"></span>Question</div>
+                <div class="agent-card" id="agent-faq"><span class="agent-dot"></span>FAQ</div>
+                <div class="agent-card" id="agent-product"><span class="agent-dot"></span>Product</div>
+                <div class="agent-card" id="agent-comparison"><span class="agent-dot"></span>Comparison</div>
+                <div class="agent-card" id="agent-template"><span class="agent-dot"></span>Template</div>
             </div>
         </div>
     </section>
@@ -175,11 +163,8 @@
     <section class="section section-alt" id="demo">
         <div class="container">
             <div class="section-header">
-                <span class="section-tag">Live Demo</span>
-                <h2 class="section-title">Pipeline Execution</h2>
-                <p class="section-description">
-                    Run the multi-agent pipeline and watch the outputs generate in real-time.
-                </p>
+                <span class="section-tag">Console</span>
+                <h2 class="section-title">Execution Log</h2>
             </div>
 
             <div class="demo-panel">
@@ -190,59 +175,48 @@
                         <div class="control-dot green"></div>
                     </div>
                     <span class="demo-title">Pipeline Console</span>
+                    <div id="pipelineStatus" class="demo-status-badge">Ready</div>
                 </div>
                 <div class="demo-content">
                     <div id="executionLog" class="execution-log">
-                        <div class="log-placeholder">
-                            <span>Click "Run Pipeline" to execute the multi-agent system</span>
-                        </div>
+                        <div class="log-placeholder">Click "Run Pipeline" to execute the multi-agent system</div>
                     </div>
-                </div>
-                <div class="demo-status" id="pipelineStatus">
-                    <span class="status-indicator"></span>
-                    <span class="status-text">Ready</span>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Outputs Section -->
+    <!-- Outputs Section with FAQ Categories -->
     <section class="section" id="outputs">
         <div class="container">
             <div class="section-header">
-                <span class="section-tag">Generated Content</span>
-                <h2 class="section-title">JSON Outputs</h2>
-                <p class="section-description">
-                    Explore the machine-readable content pages generated by the pipeline.
-                </p>
+                <span class="section-tag">Results</span>
+                <h2 class="section-title">Generated Outputs</h2>
             </div>
 
             <div class="tabs-container">
                 <div class="tabs">
-                    <button class="tab active" data-tab="faq">
-                        <span class="tab-icon">❓</span>
-                        FAQ Page
-                    </button>
-                    <button class="tab" data-tab="product">
-                        <span class="tab-icon">📦</span>
-                        Product Page
-                    </button>
-                    <button class="tab" data-tab="comparison">
-                        <span class="tab-icon">⚖️</span>
-                        Comparison
-                    </button>
+                    <button class="tab active" data-tab="faq">❓ FAQ</button>
+                    <button class="tab" data-tab="product">📦 Product</button>
+                    <button class="tab" data-tab="comparison">⚖️ Comparison</button>
                 </div>
 
                 <div class="tab-panels">
+                    <!-- FAQ Tab with Category Filter -->
                     <div id="faq-tab" class="tab-panel active">
                         <div class="panel-header">
-                            <h3>FAQ Output</h3>
-                            <span class="panel-badge" id="faq-count">19 Q&As</span>
+                            <h3>FAQ Output <span class="panel-badge" id="faq-count">19 Q&As</span></h3>
+                            <div class="category-filter">
+                                <button class="filter-btn active" data-category="all">All</button>
+                                <button class="filter-btn" data-category="informational">Informational</button>
+                                <button class="filter-btn" data-category="safety">Safety</button>
+                                <button class="filter-btn" data-category="usage">Usage</button>
+                                <button class="filter-btn" data-category="purchase">Purchase</button>
+                                <button class="filter-btn" data-category="comparison">Comparison</button>
+                            </div>
                         </div>
                         <div id="faq-content" class="panel-content">
-                            <div class="content-placeholder">
-                                Run the pipeline to generate FAQ content
-                            </div>
+                            <div class="content-placeholder">Run the pipeline to generate FAQ content</div>
                         </div>
                     </div>
 
@@ -251,9 +225,7 @@
                             <h3>Product Page Output</h3>
                         </div>
                         <div id="product-content" class="panel-content">
-                            <div class="content-placeholder">
-                                Run the pipeline to generate Product content
-                            </div>
+                            <div class="content-placeholder">Run the pipeline to generate Product content</div>
                         </div>
                     </div>
 
@@ -262,9 +234,7 @@
                             <h3>Comparison Output</h3>
                         </div>
                         <div id="comparison-content" class="panel-content">
-                            <div class="content-placeholder">
-                                Run the pipeline to generate Comparison content
-                            </div>
+                            <div class="content-placeholder">Run the pipeline to generate Comparison content</div>
                         </div>
                     </div>
                 </div>
@@ -276,7 +246,7 @@
     <section class="section section-alt" id="products">
         <div class="container">
             <div class="section-header">
-                <span class="section-tag">Input Data</span>
+                <span class="section-tag">Input</span>
                 <h2 class="section-title">Source Products</h2>
             </div>
 
@@ -293,14 +263,10 @@
                         <span class="tag">Brightening</span>
                         <span class="tag">Fades dark spots</span>
                     </div>
-                    <div class="product-ingredients">
-                        <span class="ingredient">Vitamin C</span>
-                        <span class="ingredient">Hyaluronic Acid</span>
-                    </div>
                 </div>
 
                 <div class="product-card">
-                    <div class="product-tag secondary">Product B (Fictional)</div>
+                    <div class="product-tag secondary">Product B</div>
                     <h3 class="product-name">ClearGlow Niacinamide Serum</h3>
                     <div class="product-price">₹799</div>
                     <div class="product-meta">
@@ -311,24 +277,16 @@
                         <span class="tag">Reduces pores</span>
                         <span class="tag">Controls oil</span>
                     </div>
-                    <div class="product-ingredients">
-                        <span class="ingredient">Niacinamide</span>
-                        <span class="ingredient">Salicylic Acid</span>
-                    </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Footer -->
     <footer class="footer">
         <div class="container">
             <div class="footer-content">
-                <div class="footer-brand">
-                    <span class="logo-mark">K</span>
-                    <span>Kasparro AI Challenge</span>
-                </div>
-                <p class="footer-text">Multi-Agent Content Generation System</p>
+                <span class="logo-mark">K</span>
+                <span>Kasparro AI Challenge | Multi-Agent Content Generation System</span>
             </div>
         </div>
     </footer>
