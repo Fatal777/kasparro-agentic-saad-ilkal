@@ -2,10 +2,11 @@
  * Multi-Agent Content Generation System - Frontend
  */
 
-// API Configuration - Update with your Render backend URL when deployed
+// API Configuration - Render backend URL
 const API_BASE_URL = window.location.hostname === 'localhost'
     ? 'http://localhost:8000/api'
-    : 'https://your-backend.onrender.com/api';
+    : 'https://kasparro-content-api.onrender.com/api';
+
 
 // State
 let isRunning = false;
