@@ -36,6 +36,17 @@ class FAQAgent:
         """Initialize the FAQ Agent."""
         self.logger = get_agent_logger("FAQAgent")
     
+    def _format_currency(self, currency) -> str:
+        """Format currency code to symbol."""
+        currency_str = str(currency).upper()
+        if "INR" in currency_str:
+            return "₹"
+        elif "USD" in currency_str:
+            return "$"
+        elif "EUR" in currency_str:
+            return "€"
+        return currency_str + " "
+    
     @log_step("generate_faq")
     def process(
         self,
@@ -195,15 +206,16 @@ class FAQAgent:
             price = product.get("price", {})
             if isinstance(price, dict):
                 amount = price.get("amount", 0)
-                currency = price.get("currency", "INR")
+                currency = self._format_currency(price.get("currency", "INR"))
                 if amount:
-                    return f"{product_name} is priced at {currency} {amount}."
+                    return f"{product_name} is priced at {currency}{int(amount)}."
         
         if "worth" in q_lower:
             benefit_list = benefits.get("benefitList", [])
             price = product.get("price", {})
             if isinstance(price, dict) and benefit_list:
-                return f"At {price.get('currency', 'INR')} {price.get('amount', 0)}, {product_name} offers {', '.join(benefit_list).lower()} benefits, making it a good value."
+                currency = self._format_currency(price.get("currency", "INR"))
+                return f"At {currency}{int(price.get('amount', 0))}, {product_name} offers {', '.join(benefit_list).lower()} benefits, making it a good value."
         
         if "where" in q_lower and "buy" in q_lower:
             return f"{product_name} can be purchased from authorized retailers and online stores."

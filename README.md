@@ -2,71 +2,157 @@
 
 A production-grade, modular agentic automation system that takes product datasets and autonomously generates structured, machine-readable content pages.
 
-## 🎯 Overview
+## 🎯 Objective
 
-This system implements a **DAG-based multi-agent architecture** following the CAP theorem principles:
+Design and implement a **DAG-based multi-agent system** that:
+- Parses product data into clean internal models
+- Generates 15+ categorized user questions
+- Assembles 3 content pages (FAQ, Product, Comparison)
+- Outputs strict JSON (no free text)
 
-- **Consistency**: Type-safe Pydantic models & state persistence
-- **Availability**: Retry logic with exponential backoff
-- **Partition Tolerance**: Agent isolation & graceful degradation
+---
 
-## 🏗️ Architecture
+## 🏗️ System Architecture
+
+### High-Level Overview
+
+```mermaid
+flowchart TB
+    subgraph Input["📥 Input Layer"]
+        PD[("product_data.json<br/>Product A")]
+        PDB[("product_b_data.json<br/>Product B (Fictional)")]
+    end
+
+    subgraph Orchestrator["🎛️ Orchestrator (DAG Controller)"]
+        ORCH[["orchestrator.py<br/>Controls execution order<br/>Manages message passing"]]
+    end
+
+    subgraph Agents["🤖 Agent Layer"]
+        PA["Parser Agent<br/>raw → model"]
+        QA["Question Agent<br/>model → 15+ questions"]
+        FAQA["FAQ Agent<br/>→ Q&A pairs"]
+        PPA["Product Page Agent<br/>→ product content"]
+        CA["Comparison Agent<br/>→ A vs B content"]
+        TA["Template Agent<br/>validate & write"]
+    end
+
+    subgraph LogicBlocks["⚙️ Logic Blocks (Pure Functions)"]
+        BB["benefits_block()"]
+        UB["usage_block()"]
+        IB["ingredient_block()"]
+        CB["comparison_block()"]
+    end
+
+    subgraph Output["📤 Output Layer"]
+        FJ[("faq.json")]
+        PPJ[("product_page.json")]
+        CPJ[("comparison_page.json")]
+    end
+
+    PD --> ORCH
+    PDB --> ORCH
+    ORCH --> PA
+    PA --> BB & UB & IB & CB
+    PA --> QA
+    BB & UB & IB --> FAQA & PPA
+    CB --> CA
+    QA --> FAQA
+    FAQA --> TA
+    PPA --> TA
+    CA --> TA
+    TA --> FJ & PPJ & CPJ
+```
+
+### Agent Communication Flow
+
+```mermaid
+sequenceDiagram
+    participant O as Orchestrator
+    participant PA as Parser Agent
+    participant LB as Logic Blocks
+    participant QA as Question Agent
+    participant FA as FAQ Agent
+    participant PPA as Product Page Agent
+    participant CA as Comparison Agent
+    participant TA as Template Agent
+
+    O->>PA: raw_data
+    PA-->>O: ProductModel A & B
+    
+    O->>LB: ProductModel
+    LB-->>O: benefits_data, usage_data, ingredient_data
+    
+    O->>LB: ProductModel A & B
+    LB-->>O: comparison_data
+    
+    O->>QA: ProductModel
+    QA-->>O: QuestionSet (21 questions)
+    
+    O->>FA: ProductModel + QuestionSet + LogicBlock outputs
+    FA-->>O: FAQPageData
+    
+    O->>PPA: ProductModel + LogicBlock outputs
+    PPA-->>O: ProductPageData
+    
+    O->>CA: ProductModel A + B + comparison_data
+    CA-->>O: ComparisonPageData
+    
+    O->>TA: PageData + Template
+    TA-->>O: Validated JSON
+```
+
+---
+
+## 📁 Project Structure
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         ORCHESTRATOR                            │
-│  (DAG Controller - manages execution order & message passing)   │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-        ┌───────────────────────┼───────────────────────┐
-        ▼                       ▼                       ▼
-┌───────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│ Parser Agent  │────▶│  Logic Blocks   │────▶│  Page Agents    │
-│ (raw → model) │     │ (pure functions)│     │ (FAQ/Product/   │
-└───────────────┘     └─────────────────┘     │  Comparison)    │
-                                              └─────────────────┘
-                                                      │
-                                                      ▼
-                                              ┌─────────────────┐
-                                              │ Template Agent  │
-                                              │ (validate+write)│
-                                              └─────────────────┘
-                                                      │
-                                                      ▼
-                                               JSON OUTPUT
-```
-
-## 📦 Project Structure
-
-```
-├── agents/                  # Agent implementations
-│   ├── orchestrator.py      # DAG controller
-│   ├── parser_agent.py      # Data parsing
-│   ├── question_agent.py    # Question generation
-│   ├── faq_agent.py         # FAQ page generation
-│   ├── product_page_agent.py# Product page generation
-│   ├── comparison_agent.py  # Comparison page generation
-│   └── template_agent.py    # Template processing
+kasparro-agentic/
+├── agents/                      # Worker agents
+│   ├── orchestrator.py          # DAG controller (main entry point)
+│   ├── parser_agent.py          # Converts raw data → ProductModel
+│   ├── question_agent.py        # Generates 15+ categorized questions
+│   ├── faq_agent.py             # Generates FAQ page content
+│   ├── product_page_agent.py    # Generates product description
+│   ├── comparison_agent.py      # Generates comparison page
+│   └── template_agent.py        # Validates and writes JSON output
 │
-├── logic_blocks/            # Pure function transformations
-│   ├── benefits_block.py
-│   ├── usage_block.py
-│   ├── ingredient_block.py
-│   └── comparison_block.py
+├── logic_blocks/                # Pure function transformations
+│   ├── benefits_block.py        # Extract & structure benefits
+│   ├── usage_block.py           # Parse usage instructions
+│   ├── ingredient_block.py      # Extract ingredient info
+│   └── comparison_block.py      # Compare two products
 │
-├── core/                    # Production infrastructure
-│   ├── models.py            # Pydantic data models
-│   ├── config.py            # Configuration management
-│   ├── logging.py           # Structured logging
-│   ├── errors.py            # Error handling & retry
-│   └── state.py             # State persistence
+├── core/                        # Production infrastructure
+│   ├── models.py                # Pydantic data models (type safety)
+│   ├── config.py                # Configuration management
+│   ├── logging.py               # Structured logging
+│   ├── errors.py                # Error handling & retry logic
+│   └── state.py                 # State persistence (checkpoints)
 │
-├── templates/               # JSON template schemas
-├── data/                    # Input product data
-├── output/                  # Generated JSON outputs
-├── tests/                   # Unit & integration tests
-└── docs/                    # Documentation
+├── templates/                   # JSON template schemas
+│   ├── faq_template.json
+│   ├── product_template.json
+│   └── comparison_template.json
+│
+├── data/                        # Input data
+│   ├── product_data.json        # GlowBoost Vitamin C Serum
+│   └── product_b_data.json      # ClearGlow Niacinamide Serum (fictional)
+│
+├── output/                      # Generated JSON outputs
+│   ├── faq.json
+│   ├── product_page.json
+│   └── comparison_page.json
+│
+├── tests/                       # Unit & integration tests
+│   ├── test_logic_blocks.py
+│   ├── test_agents.py
+│   └── test_orchestrator.py
+│
+└── docs/
+    └── projectdocumentation.md  # System design documentation
 ```
+
+---
 
 ## 🚀 Quick Start
 
@@ -75,23 +161,16 @@ This system implements a **DAG-based multi-agent architecture** following the CA
 ```bash
 # Clone the repository
 git clone <repo-url>
-cd kasparro-agentic-content-generation
+cd kasparro-agentic
 
 # Install dependencies
-pip install -r requirements.txt
-
-# Or install as package
-pip install -e .
+pip install pydantic pydantic-settings
 ```
 
 ### Run the Pipeline
 
 ```bash
-# Run the full pipeline
 python -m agents.orchestrator
-
-# Or use the entry point (if installed)
-generate-content
 ```
 
 ### Expected Output
@@ -113,7 +192,36 @@ Multi-Agent Content Generation System
   ✓ Comparison: price diff=₹100
 [LOGIC_BLOCKS] Completed
 
-...
+[GENERATE_QUESTIONS] Starting...
+  ✓ Generated 21 questions
+    - informational: 8
+    - safety: 4
+    - usage: 4
+    - purchase: 3
+    - comparison: 2
+[GENERATE_QUESTIONS] Completed
+
+[GENERATE_PAGES] Starting...
+  ✓ FAQ Page: 19 Q&As
+  ✓ Product Page: GlowBoost Vitamin C Serum
+  ✓ Comparison Page: GlowBoost vs ClearGlow
+[GENERATE_PAGES] Completed
+
+[FILL_TEMPLATES] Starting...
+  ✓ FAQ template validated
+  ✓ Product template validated
+  ✓ Comparison template validated
+[FILL_TEMPLATES] Completed
+
+[WRITE_OUTPUTS] Starting...
+  ✓ Written: output/faq.json
+  ✓ Written: output/product_page.json
+  ✓ Written: output/comparison_page.json
+[WRITE_OUTPUTS] Completed
+
+============================================================
+Pipeline completed successfully!
+============================================================
 
 ✅ Pipeline completed successfully!
    Pipeline ID: 20251209_103000
@@ -124,104 +232,168 @@ Output files:
   - comparison_page: output/comparison_page.json
 ```
 
+---
+
 ## 🧪 Testing
+
+### Run All Tests
 
 ```bash
 # Run all tests
 python -m pytest tests/ -v
 
-# Run with coverage
-python -m pytest tests/ --cov=agents --cov=logic_blocks --cov=core
-
-# Run specific test files
+# Run individual test files
 python tests/test_logic_blocks.py
 python tests/test_agents.py
 python tests/test_orchestrator.py
 ```
 
-## ⚙️ Configuration
-
-Set environment variables to configure the system:
+### Test Specific Components
 
 ```bash
-# Environment (development, staging, production)
-export PIPELINE_ENV=production
+# Test logic blocks (pure functions)
+python -c "
+from logic_blocks import process_benefits
+result = process_benefits({'benefits': ['Brightening', 'Fades dark spots']})
+print(result)
+"
 
-# Debug mode
-export PIPELINE_DEBUG=false
-
-# Logging level
-export PIPELINE_LOGGING__LEVEL=WARNING
+# Test individual agent
+python -c "
+from agents.parser_agent import ParserAgent
+agent = ParserAgent()
+result = agent.process({
+    'productName': 'Test Product',
+    'keyIngredients': ['Vitamin C'],
+    'benefits': ['Brightening'],
+    'price': {'amount': 500, 'currency': 'INR'}
+})
+print(result)
+"
 ```
 
-## 📄 Output Structure
+---
 
-### faq.json
+## 📊 Agent Independence
+
+**Each agent is self-contained and can run independently:**
+
+| Agent | Can Run Alone | Dependencies |
+|-------|---------------|--------------|
+| Parser Agent | ✅ Yes | None (first in DAG) |
+| Question Agent | ✅ Yes | Needs ProductModel dict |
+| FAQ Agent | ✅ Yes | Needs ProductModel + QuestionSet + block data |
+| Product Page Agent | ✅ Yes | Needs ProductModel + block data |
+| Comparison Agent | ✅ Yes | Needs 2 ProductModels + comparison data |
+| Template Agent | ✅ Yes | Needs page data + template schema |
+
+**The Orchestrator is the ONLY component that:**
+- Creates agent instances
+- Passes data between agents
+- Controls execution order
+- Manages the DAG flow
+
+Agents **never import or call each other directly**.
+
+---
+
+## 📄 Output Examples
+
+### faq.json (19 Q&As)
+
 ```json
 {
   "productName": "GlowBoost Vitamin C Serum",
   "generatedAt": "2025-12-09T10:00:00Z",
-  "totalQuestions": 10,
+  "totalQuestions": 19,
   "faqs": [
     {
       "id": "faq-001",
       "category": "informational",
-      "question": "What are the key ingredients?",
-      "answer": "The key ingredients are Vitamin C and Hyaluronic Acid."
+      "question": "What are the key ingredients in GlowBoost Vitamin C Serum?",
+      "answer": "The key ingredients in GlowBoost Vitamin C Serum are Vitamin C, Hyaluronic Acid."
+    },
+    {
+      "id": "faq-015",
+      "category": "purchase",
+      "question": "How much does GlowBoost Vitamin C Serum cost?",
+      "answer": "GlowBoost Vitamin C Serum is priced at ₹699."
     }
   ]
 }
 ```
 
 ### product_page.json
+
 ```json
 {
   "productName": "GlowBoost Vitamin C Serum",
   "concentration": "10% Vitamin C",
   "skinTypes": ["Oily", "Combination"],
+  "keyIngredients": ["Vitamin C", "Hyaluronic Acid"],
   "benefits": {
-    "list": ["Brightening", "Fades dark spots"],
-    "primary": "Brightening"
+    "items": ["Brightening", "Fades dark spots"],
+    "primary": "Brightening",
+    "count": 2
   },
   "usage": {
     "instructions": "Apply 2–3 drops in the morning before sunscreen",
-    "frequency": "morning"
+    "frequency": "morning",
+    "quantity": "2–3 drops",
+    "timing": "before sunscreen"
   },
-  "price": {"amount": 699, "currency": "INR"}
+  "price": { "amount": 699, "currency": "INR" }
 }
 ```
 
 ### comparison_page.json
+
 ```json
 {
-  "productA": {"name": "GlowBoost Vitamin C Serum", ...},
-  "productB": {"name": "ClearGlow Niacinamide Serum", ...},
+  "productA": {
+    "name": "GlowBoost Vitamin C Serum",
+    "price": 699,
+    "benefits": ["Brightening", "Fades dark spots"]
+  },
+  "productB": {
+    "name": "ClearGlow Niacinamide Serum",
+    "price": 799,
+    "benefits": ["Reduces pores", "Controls oil"]
+  },
   "comparison": {
     "commonIngredients": [],
     "uniqueToA": ["Vitamin C", "Hyaluronic Acid"],
     "uniqueToB": ["Niacinamide", "Salicylic Acid"],
     "priceDifference": 100,
-    "recommendation": "GlowBoost is more affordable by ₹100..."
+    "cheaperProduct": "productA",
+    "recommendation": "GlowBoost Vitamin C Serum is more affordable by ₹100..."
   }
 }
 ```
 
-## 🔧 Production Features
+---
 
-| Feature | Implementation |
-|---------|---------------|
-| **Type Safety** | Pydantic models with validation |
-| **Error Handling** | Retry logic, circuit breaker |
-| **State Persistence** | Checkpoint-based recovery |
-| **Logging** | Structured logging with step tracking |
-| **Configuration** | Environment-based settings |
-| **Testing** | Unit + integration tests |
+## ⚙️ Configuration
+
+Set environment variables to customize:
+
+```bash
+# Environment (development, staging, production)
+export PIPELINE_ENV=production
+
+# Logging level
+export PIPELINE_LOG_LEVEL=WARNING
+```
+
+---
 
 ## 📋 Requirements
 
 - Python 3.10+
 - pydantic >= 2.5.0
 - pydantic-settings >= 2.1.0
+
+---
 
 ## 📝 License
 

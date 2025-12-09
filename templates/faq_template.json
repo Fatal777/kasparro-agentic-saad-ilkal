@@ -1,9 +1,19 @@
 {
     "templateName": "faq",
     "version": "1.0",
+    "description": "FAQ page template with categorized Q&As",
     "requiredFields": [
         "productName",
         "faqs"
+    ],
+    "blockDependencies": [
+        "benefits_block",
+        "usage_block",
+        "ingredient_block"
+    ],
+    "agentDependencies": [
+        "ParserAgent",
+        "QuestionAgent"
     ],
     "schema": {
         "productName": {
@@ -17,7 +27,10 @@
         },
         "totalQuestions": {
             "type": "integer",
-            "description": "Total number of FAQs"
+            "description": "Total number of FAQs",
+            "rules": {
+                "minimum": 5
+            }
         },
         "faqs": {
             "type": "array",
@@ -38,10 +51,16 @@
                     ]
                 },
                 "question": {
-                    "type": "string"
+                    "type": "string",
+                    "rules": {
+                        "minLength": 5
+                    }
                 },
                 "answer": {
-                    "type": "string"
+                    "type": "string",
+                    "rules": {
+                        "minLength": 5
+                    }
                 }
             }
         }

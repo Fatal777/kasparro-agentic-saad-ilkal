@@ -13,36 +13,6 @@ A **DAG-based multi-agent system** with an orchestrator controlling specialized 
 - **Deterministic Output**: Same input always produces same output
 - **No Hallucination**: All content derives from provided data
 
-### System Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         ORCHESTRATOR                            │
-│  (DAG Controller - manages execution order & message passing)   │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-        ┌───────────────────────┼───────────────────────┐
-        ▼                       ▼                       ▼
-┌───────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│ Parser Agent  │────▶│  Logic Blocks   │────▶│  Page Agents    │
-│ (raw → model) │     │ (pure functions)│     │ (FAQ/Product/   │
-└───────────────┘     └─────────────────┘     │  Comparison)    │
-                                              └─────────────────┘
-                                                      │
-                                                      ▼
-                                              ┌─────────────────┐
-                                              │ Template Agent  │
-                                              │ (validate+write)│
-                                              └─────────────────┘
-                                                      │
-                                                      ▼
-                                              ┌─────────────────┐
-                                              │   JSON Output   │
-                                              │ (faq, product,  │
-                                              │  comparison)    │
-                                              └─────────────────┘
-```
-
 ## Scopes & Assumptions
 
 ### In Scope
@@ -58,25 +28,66 @@ A **DAG-based multi-agent system** with an orchestrator controlling specialized 
 
 ## System Design
 
+### Architecture Overview
+
+```mermaid
+flowchart TB
+    subgraph Input["Input Layer"]
+        PD["product_data.json"]
+        PDB["product_b_data.json"]
+    end
+
+    subgraph Orchestrator["Orchestrator (DAG Controller)"]
+        ORCH[["orchestrator.py"]]
+    end
+
+    subgraph Agents["Agent Layer"]
+        PA["Parser Agent"]
+        QA["Question Agent"]
+        FAQA["FAQ Agent"]
+        PPA["Product Page Agent"]
+        CA["Comparison Agent"]
+        TA["Template Agent"]
+    end
+
+    subgraph LogicBlocks["Logic Blocks"]
+        BB["benefits_block"]
+        UB["usage_block"]
+        IB["ingredient_block"]
+        CB["comparison_block"]
+    end
+
+    subgraph Output["Output Layer"]
+        FJ["faq.json"]
+        PPJ["product_page.json"]
+        CPJ["comparison_page.json"]
+    end
+
+    PD --> ORCH
+    PDB --> ORCH
+    ORCH --> PA
+    PA --> BB & UB & IB & CB
+    PA --> QA
+    BB & UB & IB --> FAQA & PPA
+    CB --> CA
+    QA --> FAQA
+    FAQA --> TA
+    PPA --> TA
+    CA --> TA
+    TA --> FJ & PPJ & CPJ
+```
+
 ### Execution Flow (DAG)
 
-```
-[Raw Data] → [Parser Agent] → [Product Model A & B]
-                   │
-                   ▼
-[Logic Blocks] → [Benefits | Usage | Ingredients | Comparison]
-                   │
-                   ▼
-[Question Agent] → [15+ Categorized Questions]
-                   │
-                   ▼
-[Page Agents] → [FAQ Agent | Product Agent | Comparison Agent]
-                   │
-                   ▼
-[Template Agent] → [Validate & Fill Templates]
-                   │
-                   ▼
-[Output] → [faq.json | product_page.json | comparison_page.json]
+```mermaid
+graph LR
+    A[Raw Data] --> B[Parser Agent]
+    B --> C[Logic Blocks]
+    B --> D[Question Agent]
+    C --> E[Page Agents]
+    D --> E
+    E --> F[Template Agent]
+    F --> G[JSON Output]
 ```
 
 ### Agent Responsibilities
@@ -100,10 +111,17 @@ A **DAG-based multi-agent system** with an orchestrator controlling specialized 
 | `process_ingredients()` | ProductModel | ingredientList, concentration |
 | `compare_products()` | A, B | common, unique, price diff |
 
+### Template System
+
+Each template defines:
+- **fields**: Required output fields
+- **rules**: Validation rules (min/max length, patterns)
+- **blockDependencies**: Which logic blocks provide data
+- **agentDependencies**: Which agents must run before
+
 ### Running the System
 
 ```bash
-# From project root
 python -m agents.orchestrator
 ```
 

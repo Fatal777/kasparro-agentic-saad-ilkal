@@ -1,10 +1,18 @@
 {
     "templateName": "comparison",
     "version": "1.0",
+    "description": "Product comparison page template",
     "requiredFields": [
         "productA",
         "productB",
         "comparison"
+    ],
+    "blockDependencies": [
+        "ingredient_block",
+        "comparison_block"
+    ],
+    "agentDependencies": [
+        "ParserAgent"
     ],
     "schema": {
         "generatedAt": {
@@ -13,6 +21,7 @@
         },
         "productA": {
             "type": "object",
+            "description": "First product summary",
             "properties": {
                 "name": {
                     "type": "string"
@@ -48,6 +57,7 @@
         },
         "productB": {
             "type": "object",
+            "description": "Second product summary (fictional)",
             "properties": {
                 "name": {
                     "type": "string"
@@ -83,6 +93,7 @@
         },
         "comparison": {
             "type": "object",
+            "sourceBlock": "comparison_block",
             "properties": {
                 "commonIngredients": {
                     "type": "array",
@@ -102,8 +113,29 @@
                         "type": "string"
                     }
                 },
+                "commonBenefits": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "uniqueBenefitsA": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "uniqueBenefitsB": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "priceDifference": {
-                    "type": "number"
+                    "type": "number",
+                    "rules": {
+                        "minimum": 0
+                    }
                 },
                 "cheaperProduct": {
                     "type": "string"

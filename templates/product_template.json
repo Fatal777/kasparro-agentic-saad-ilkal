@@ -1,6 +1,7 @@
 {
     "templateName": "product",
     "version": "1.0",
+    "description": "Product description page template",
     "requiredFields": [
         "productName",
         "concentration",
@@ -10,10 +11,22 @@
         "usage",
         "price"
     ],
+    "blockDependencies": [
+        "benefits_block",
+        "usage_block",
+        "ingredient_block"
+    ],
+    "agentDependencies": [
+        "ParserAgent"
+    ],
     "schema": {
         "productName": {
             "type": "string",
-            "description": "Name of the product"
+            "description": "Name of the product",
+            "rules": {
+                "minLength": 1,
+                "maxLength": 200
+            }
         },
         "concentration": {
             "type": "string",
@@ -35,8 +48,9 @@
         },
         "benefits": {
             "type": "object",
+            "sourceBlock": "benefits_block",
             "properties": {
-                "list": {
+                "items": {
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -52,6 +66,7 @@
         },
         "usage": {
             "type": "object",
+            "sourceBlock": "usage_block",
             "properties": {
                 "instructions": {
                     "type": "string"
@@ -75,7 +90,10 @@
             "type": "object",
             "properties": {
                 "amount": {
-                    "type": "number"
+                    "type": "number",
+                    "rules": {
+                        "minimum": 0
+                    }
                 },
                 "currency": {
                     "type": "string"
