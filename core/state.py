@@ -40,6 +40,11 @@ class PipelineState(BaseModel):
     product_page: Optional[dict] = None
     comparison_page: Optional[dict] = None
     
+    # Template output data
+    faq_output: Optional[dict] = None
+    product_output: Optional[dict] = None
+    comparison_output: Optional[dict] = None
+    
     # Execution tracking
     steps_completed: list[str] = Field(default_factory=list)
     errors: list[dict] = Field(default_factory=list)

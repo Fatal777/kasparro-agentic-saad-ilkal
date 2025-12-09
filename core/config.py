@@ -9,7 +9,6 @@ import os
 from pathlib import Path
 from typing import Optional
 from pydantic import BaseModel, Field
-from pydantic_settings import BaseSettings
 
 
 class PathConfig(BaseModel):
@@ -47,19 +46,18 @@ class LoggingConfig(BaseModel):
     log_file_name: str = Field(default="pipeline.log")
 
 
-class Settings(BaseSettings):
+class Settings(BaseModel):
     """
-    Main settings class with environment variable support.
+    Main settings class.
     
-    Environment variables:
+    Environment variables can be set via:
         - PIPELINE_ENV: Environment name (development, staging, production)
         - PIPELINE_DEBUG: Enable debug mode
-        - PIPELINE_LOG_LEVEL: Logging level
     """
     
     # Environment
-    env: str = Field(default="development", alias="PIPELINE_ENV")
-    debug: bool = Field(default=False, alias="PIPELINE_DEBUG")
+    env: str = Field(default="development")
+    debug: bool = Field(default=False)
     
     # Paths
     paths: PathConfig = Field(default_factory=PathConfig)
@@ -77,11 +75,6 @@ class Settings(BaseSettings):
     parallel_page_generation: bool = Field(default=False, description="Run page agents in parallel")
     validate_json_output: bool = Field(default=True)
     save_intermediate_state: bool = Field(default=True, description="Persist state between steps")
-    
-    model_config = {
-        "env_prefix": "PIPELINE_",
-        "env_nested_delimiter": "__"
-    }
     
     @classmethod
     def for_environment(cls, env: str) -> "Settings":

@@ -169,7 +169,7 @@ class FAQPageData(BaseModel):
 
 class BenefitsSection(BaseModel):
     """Benefits section for product page."""
-    list: list[str] = Field(default_factory=list)
+    items: list[str] = Field(default_factory=list)
     primary: str = Field(default="")
     count: int = Field(ge=0)
 

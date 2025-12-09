@@ -1,0 +1,62 @@
+{
+  "productA": {
+    "name": "GlowBoost Vitamin C Serum",
+    "concentration": "10% Vitamin C",
+    "price": 699.0,
+    "currency": "INR",
+    "benefits": [
+      "Brightening",
+      "Fades dark spots"
+    ],
+    "ingredients": [
+      "Vitamin C",
+      "Hyaluronic Acid"
+    ],
+    "skinTypes": [
+      "Oily",
+      "Combination"
+    ]
+  },
+  "productB": {
+    "name": "ClearGlow Niacinamide Serum",
+    "concentration": "5% Niacinamide",
+    "price": 799.0,
+    "currency": "INR",
+    "benefits": [
+      "Reduces pores",
+      "Controls oil"
+    ],
+    "ingredients": [
+      "Niacinamide",
+      "Salicylic Acid"
+    ],
+    "skinTypes": [
+      "Oily",
+      "Acne-prone"
+    ]
+  },
+  "comparison": {
+    "commonIngredients": [],
+    "uniqueToA": [
+      "Hyaluronic Acid",
+      "Vitamin C"
+    ],
+    "uniqueToB": [
+      "Niacinamide",
+      "Salicylic Acid"
+    ],
+    "commonBenefits": [],
+    "uniqueBenefitsA": [
+      "Brightening",
+      "Fades dark spots"
+    ],
+    "uniqueBenefitsB": [
+      "Controls oil",
+      "Reduces pores"
+    ],
+    "priceDifference": 100.0,
+    "cheaperProduct": "productA",
+    "recommendation": "GlowBoost Vitamin C Serum is more affordable by ₹100.0. GlowBoost Vitamin C Serum focuses on brightening, fades dark spots. ClearGlow Niacinamide Serum focuses on reduces pores, controls oil. Both are suitable for oily skin."
+  },
+  "generatedAt": "2025-12-09T04:50:36.931173+00:00"
+}
