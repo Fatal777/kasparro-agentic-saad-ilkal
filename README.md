@@ -392,9 +392,100 @@ export PIPELINE_LOG_LEVEL=WARNING
 - Python 3.10+
 - pydantic >= 2.5.0
 - pydantic-settings >= 2.1.0
+- fastapi >= 0.104.0 (for API)
+- uvicorn >= 0.24.0 (for API)
 
 ---
 
-## 📝 License
+## �️ Frontend Dashboard
 
-MIT License
+A modern dark-themed dashboard to visualize the multi-agent system.
+
+### Local Development
+
+```bash
+# Start the backend API
+uvicorn api.main:app --reload --port 8000
+
+# Open frontend in browser
+# Open frontend/index.html directly, or use a local server:
+python -m http.server 3000 --directory frontend
+```
+
+Then open http://localhost:3000 in your browser.
+
+### Features
+- 🎨 Modern dark theme with glassmorphism
+- 📊 Pipeline architecture visualization
+- ▶️ Run pipeline button with live execution log
+- 📋 Tab-based output viewer (FAQ, Product, Comparison)
+- 📦 Input product display
+
+---
+
+## 🔌 REST API
+
+FastAPI backend exposes the pipeline via REST endpoints.
+
+### Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/health` | Health check |
+| POST | `/api/run-pipeline` | Run the full pipeline |
+| GET | `/api/outputs/faq` | Get FAQ JSON output |
+| GET | `/api/outputs/product` | Get Product JSON output |
+| GET | `/api/outputs/comparison` | Get Comparison JSON output |
+| GET | `/api/products` | Get input product data |
+| GET | `/api/system-info` | Get system architecture info |
+
+### Start API Server
+
+```bash
+uvicorn api.main:app --reload --port 8000
+```
+
+API docs available at: http://localhost:8000/docs
+
+---
+
+## 🚀 Deployment
+
+### Backend (Render.com - Recommended)
+
+1. Push code to GitHub
+2. Go to [render.com](https://render.com) → New → Web Service
+3. Connect your GitHub repo
+4. Settings:
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `uvicorn api.main:app --host 0.0.0.0 --port $PORT`
+   - **Environment**: Python 3
+5. Click "Create Web Service"
+6. Copy your Render URL (e.g., `https://your-app.onrender.com`)
+
+### Frontend (Vercel)
+
+1. Update `frontend/app.js` line 7 with your Render backend URL:
+   ```javascript
+   const API_BASE_URL = 'https://your-app.onrender.com/api';
+   ```
+2. Push to GitHub
+3. Go to [vercel.com](https://vercel.com) → Import Project
+4. Select your repo
+5. Framework: Other
+6. Root Directory: `frontend`
+7. Deploy!
+
+### Alternative: Railway
+
+```bash
+# Install Railway CLI
+npm install -g @railway/cli
+
+# Login and deploy
+railway login
+railway init
+railway up
+```
+
+---

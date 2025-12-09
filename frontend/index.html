@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Agent Content System | Kasparro AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <!-- Floating Header -->
+    <header class="header" id="header">
+        <div class="header-inner">
+            <a href="#" class="logo">
+                <span class="logo-mark">K</span>
+                <span class="logo-text">Kasparro</span>
+            </a>
+            <nav class="nav">
+                <a href="#architecture" class="nav-link">Architecture</a>
+                <a href="#demo" class="nav-link">Demo</a>
+                <a href="#outputs" class="nav-link">Outputs</a>
+            </nav>
+            <a href="https://github.com" target="_blank" class="btn btn-header">
+                View on GitHub
+            </a>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero" id="hero">
+        <div class="hero-bg">
+            <div class="grid-pattern"></div>
+            <div class="gradient-orb orb-1"></div>
+            <div class="gradient-orb orb-2"></div>
+        </div>
+
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span class="badge-dot"></span>
+                Multi-Agent System
+            </div>
+
+            <h1 class="hero-title">
+                <span class="title-line">Intelligent Content</span>
+                <span class="title-line gradient-text">Generation Pipeline</span>
+            </h1>
+
+            <p class="hero-description">
+                A DAG-based orchestration system that autonomously generates
+                structured content using specialized agents and pure-function logic blocks.
+            </p>
+
+            <div class="hero-actions">
+                <button id="runPipelineBtn" class="btn btn-primary">
+                    <span class="btn-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                        </svg>
+                    </span>
+                    Run Pipeline
+                </button>
+                <a href="#architecture" class="btn btn-secondary">
+                    Learn More
+                </a>
+            </div>
+
+            <div class="hero-stats">
+                <div class="stat">
+                    <span class="stat-value">7</span>
+                    <span class="stat-label">Agents</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat">
+                    <span class="stat-value">4</span>
+                    <span class="stat-label">Logic Blocks</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat">
+                    <span class="stat-value">3</span>
+                    <span class="stat-label">Outputs</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="scroll-indicator">
+            <span>Scroll to explore</span>
+            <div class="scroll-arrow"></div>
+        </div>
+    </section>
+
+    <!-- Architecture Section -->
+    <section class="section" id="architecture">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">System Design</span>
+                <h2 class="section-title">Pipeline Architecture</h2>
+                <p class="section-description">
+                    A directed acyclic graph orchestrates specialized agents through a modular execution flow.
+                </p>
+            </div>
+
+            <div class="architecture-visual">
+                <div class="pipeline">
+                    <div class="pipeline-stage" data-stage="input">
+                        <div class="stage-header">Input</div>
+                        <div class="stage-nodes">
+                            <div class="node node-data">
+                                <span class="node-icon">📄</span>
+                                <span class="node-label">Product A</span>
+                            </div>
+                            <div class="node node-data">
+                                <span class="node-icon">📄</span>
+                                <span class="node-label">Product B</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pipeline-connector">
+                        <div class="connector-line"></div>
+                        <div class="connector-arrow"></div>
+                    </div>
+
+                    <div class="pipeline-stage" data-stage="orchestrator">
+                        <div class="stage-header">Orchestrator</div>
+                        <div class="stage-nodes">
+                            <div class="node node-orchestrator">
+                                <span class="node-label">DAG Controller</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pipeline-connector">
+                        <div class="connector-line"></div>
+                        <div class="connector-arrow"></div>
+                    </div>
+
+                    <div class="pipeline-stage" data-stage="agents">
+                        <div class="stage-header">Agents</div>
+                        <div class="stage-nodes agents-grid">
+                            <div class="node node-agent">Parser</div>
+                            <div class="node node-agent">Question</div>
+                            <div class="node node-agent">FAQ</div>
+                            <div class="node node-agent">Product</div>
+                            <div class="node node-agent">Comparison</div>
+                            <div class="node node-agent">Template</div>
+                        </div>
+                    </div>
+
+                    <div class="pipeline-connector">
+                        <div class="connector-line"></div>
+                        <div class="connector-arrow"></div>
+                    </div>
+
+                    <div class="pipeline-stage" data-stage="output">
+                        <div class="stage-header">Output</div>
+                        <div class="stage-nodes">
+                            <div class="node node-output">faq.json</div>
+                            <div class="node node-output">product.json</div>
+                            <div class="node node-output">comparison.json</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Demo Section -->
+    <section class="section section-alt" id="demo">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">Live Demo</span>
+                <h2 class="section-title">Pipeline Execution</h2>
+                <p class="section-description">
+                    Run the multi-agent pipeline and watch the outputs generate in real-time.
+                </p>
+            </div>
+
+            <div class="demo-panel">
+                <div class="demo-header">
+                    <div class="demo-controls">
+                        <div class="control-dot red"></div>
+                        <div class="control-dot yellow"></div>
+                        <div class="control-dot green"></div>
+                    </div>
+                    <span class="demo-title">Pipeline Console</span>
+                </div>
+                <div class="demo-content">
+                    <div id="executionLog" class="execution-log">
+                        <div class="log-placeholder">
+                            <span>Click "Run Pipeline" to execute the multi-agent system</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="demo-status" id="pipelineStatus">
+                    <span class="status-indicator"></span>
+                    <span class="status-text">Ready</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Outputs Section -->
+    <section class="section" id="outputs">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">Generated Content</span>
+                <h2 class="section-title">JSON Outputs</h2>
+                <p class="section-description">
+                    Explore the machine-readable content pages generated by the pipeline.
+                </p>
+            </div>
+
+            <div class="tabs-container">
+                <div class="tabs">
+                    <button class="tab active" data-tab="faq">
+                        <span class="tab-icon">❓</span>
+                        FAQ Page
+                    </button>
+                    <button class="tab" data-tab="product">
+                        <span class="tab-icon">📦</span>
+                        Product Page
+                    </button>
+                    <button class="tab" data-tab="comparison">
+                        <span class="tab-icon">⚖️</span>
+                        Comparison
+                    </button>
+                </div>
+
+                <div class="tab-panels">
+                    <div id="faq-tab" class="tab-panel active">
+                        <div class="panel-header">
+                            <h3>FAQ Output</h3>
+                            <span class="panel-badge" id="faq-count">19 Q&As</span>
+                        </div>
+                        <div id="faq-content" class="panel-content">
+                            <div class="content-placeholder">
+                                Run the pipeline to generate FAQ content
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="product-tab" class="tab-panel">
+                        <div class="panel-header">
+                            <h3>Product Page Output</h3>
+                        </div>
+                        <div id="product-content" class="panel-content">
+                            <div class="content-placeholder">
+                                Run the pipeline to generate Product content
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="comparison-tab" class="tab-panel">
+                        <div class="panel-header">
+                            <h3>Comparison Output</h3>
+                        </div>
+                        <div id="comparison-content" class="panel-content">
+                            <div class="content-placeholder">
+                                Run the pipeline to generate Comparison content
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Products Section -->
+    <section class="section section-alt" id="products">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">Input Data</span>
+                <h2 class="section-title">Source Products</h2>
+            </div>
+
+            <div class="products-grid">
+                <div class="product-card">
+                    <div class="product-tag">Product A</div>
+                    <h3 class="product-name">GlowBoost Vitamin C Serum</h3>
+                    <div class="product-price">₹699</div>
+                    <div class="product-meta">
+                        <span class="meta-label">Concentration</span>
+                        <span class="meta-value">10% Vitamin C</span>
+                    </div>
+                    <div class="product-tags">
+                        <span class="tag">Brightening</span>
+                        <span class="tag">Fades dark spots</span>
+                    </div>
+                    <div class="product-ingredients">
+                        <span class="ingredient">Vitamin C</span>
+                        <span class="ingredient">Hyaluronic Acid</span>
+                    </div>
+                </div>
+
+                <div class="product-card">
+                    <div class="product-tag secondary">Product B (Fictional)</div>
+                    <h3 class="product-name">ClearGlow Niacinamide Serum</h3>
+                    <div class="product-price">₹799</div>
+                    <div class="product-meta">
+                        <span class="meta-label">Concentration</span>
+                        <span class="meta-value">5% Niacinamide</span>
+                    </div>
+                    <div class="product-tags">
+                        <span class="tag">Reduces pores</span>
+                        <span class="tag">Controls oil</span>
+                    </div>
+                    <div class="product-ingredients">
+                        <span class="ingredient">Niacinamide</span>
+                        <span class="ingredient">Salicylic Acid</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <span class="logo-mark">K</span>
+                    <span>Kasparro AI Challenge</span>
+                </div>
+                <p class="footer-text">Multi-Agent Content Generation System</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
