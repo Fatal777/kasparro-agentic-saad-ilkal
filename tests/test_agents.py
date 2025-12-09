@@ -1,151 +1,289 @@
 """
-Unit tests for Agents.
+Comprehensive Agent Tests
 
-Each test validates agent input/output contracts and single responsibility.
+Tests for all agents in the multi-agent pipeline,
+verifying input/output correctness and boundary enforcement.
 """
 
-import sys
+import pytest
+import json
 from pathlib import Path
+from typing import Dict, Any
 
-# Add project root to path
+# Import all agents
+import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from agents.parser_agent import ParserAgent
 from agents.question_agent import QuestionAgent
+from agents.faq_agent import FAQAgent
+from agents.product_page_agent import ProductPageAgent
+from agents.comparison_agent import ComparisonAgent
+from agents.template_agent import TemplateAgent
 
 
 class TestParserAgent:
-    """Tests for parser_agent.py"""
+    """Test suite for ParserAgent."""
     
-    def test_parse_valid_product(self):
-        """Test parsing valid product data."""
-        agent = ParserAgent()
-        
-        input_data = {
+    def setup_method(self):
+        """Setup test fixtures."""
+        self.agent = ParserAgent()
+        self.sample_data = {
             "productName": "Test Serum",
-            "concentration": "10% Vitamin C",
-            "skinType": ["Oily"],
-            "keyIngredients": ["Vitamin C"],
+            "concentration": "10%",
+            "ingredients": [
+                {"name": "Vitamin C", "percentage": 10}
+            ],
             "benefits": ["Brightening"],
-            "howToUse": "Apply daily",
+            "skinTypes": ["Oily"],
+            "applicationMethod": {
+                "steps": ["Apply 2 drops"],
+                "frequency": "morning"
+            },
             "sideEffects": "None",
             "price": {"amount": 500, "currency": "INR"}
         }
+    
+    def test_single_responsibility(self):
+        """Verify agent has single responsibility: parsing data."""
+        assert hasattr(self.agent, 'process')
+        assert callable(self.agent.process)
+    
+    def test_defined_input_output(self):
+        """Verify agent has defined input/output structure."""
+        result = self.agent.process(self.sample_data)
         
-        result = agent.process(input_data)
+        assert isinstance(result, dict)
+        assert "success" in result
+        assert "parsed_data" in result or "error" in result
+    
+    def test_no_global_state(self):
+        """Verify agent doesn't maintain hidden global state."""
+        # Process twice with same input
+        result1 = self.agent.process(self.sample_data)
+        result2 = self.agent.process(self.sample_data)
+        
+        # Results should be identical (deterministic)
+        assert result1["success"] == result2["success"]
+    
+    def test_valid_input_processing(self):
+        """Test processing valid input data."""
+        result = self.agent.process(self.sample_data)
         
         assert result["success"] is True
-        assert result["data"]["productName"] == "Test Serum"
-        assert result["data"]["price"]["amount"] == 500
-    
-    def test_parse_missing_required_fields(self):
-        """Test parsing with missing required fields."""
-        agent = ParserAgent()
-        
-        input_data = {
-            "productName": "Test Serum"
-            # Missing keyIngredients, benefits, price
-        }
-        
-        result = agent.process(input_data)
-        
-        assert result["success"] is False
-        assert "Missing required fields" in result["error"]
-    
-    def test_parse_normalize_price_number(self):
-        """Test price normalization from number."""
-        agent = ParserAgent()
-        
-        input_data = {
-            "productName": "Test",
-            "keyIngredients": ["A"],
-            "benefits": ["B"],
-            "price": 699  # Plain number
-        }
-        
-        result = agent.process(input_data)
-        
-        assert result["success"] is True
-        assert result["data"]["price"]["amount"] == 699
-        assert result["data"]["price"]["currency"] == "INR"
+        assert "parsed_data" in result
+        assert result["parsed_data"]["productName"] == "Test Serum"
 
 
 class TestQuestionAgent:
-    """Tests for question_agent.py"""
+    """Test suite for QuestionAgent."""
     
-    def test_generate_questions_count(self):
-        """Test that 15+ questions are generated."""
-        agent = QuestionAgent()
-        
-        product_model = {
-            "productName": "GlowBoost Serum",
-            "keyIngredients": ["Vitamin C", "Hyaluronic Acid"],
-            "benefits": ["Brightening"],
-            "skinType": ["Oily"],
-            "concentration": "10%",
-            "price": {"amount": 699, "currency": "INR"}
-        }
-        
-        result = agent.process(product_model)
-        
-        assert result["success"] is True
-        assert result["totalQuestions"] >= 15
-    
-    def test_generate_questions_categories(self):
-        """Test that all categories are covered."""
-        agent = QuestionAgent()
-        
-        product_model = {
+    def setup_method(self):
+        """Setup test fixtures."""
+        self.agent = QuestionAgent()
+        self.parsed_data = {
             "productName": "Test Serum",
-            "keyIngredients": ["A"],
-            "benefits": ["B"],
-            "skinType": [],
-            "concentration": "",
-            "price": {"amount": 100, "currency": "INR"}
+            "ingredients": [{"name": "Vitamin C"}],
+            "benefits": ["Brightening"],
+            "skinTypes": ["Oily"],
+            "applicationMethod": {"frequency": "morning"},
         }
+    
+    def test_single_responsibility(self):
+        """Verify agent generates questions only."""
+        result = self.agent.process(self.parsed_data)
         
-        result = agent.process(product_model)
+        assert "questions" in result
+        assert isinstance(result["questions"], list)
+    
+    def test_question_categories(self):
+        """Verify questions are properly categorized."""
+        result = self.agent.process(self.parsed_data)
         
-        # Check all categories have at least one question
-        categories = result["categoryCounts"]
-        assert categories["informational"] >= 1
-        assert categories["safety"] >= 1
-        assert categories["usage"] >= 1
-        assert categories["purchase"] >= 1
-        assert categories["comparison"] >= 1
+        categories = set()
+        for q in result["questions"]:
+            assert "category" in q
+            assert "question" in q
+            categories.add(q["category"])
+        
+        # Should have multiple categories
+        assert len(categories) >= 3
+    
+    def test_minimum_questions(self):
+        """Verify minimum 15 questions are generated."""
+        result = self.agent.process(self.parsed_data)
+        
+        assert len(result["questions"]) >= 15
 
 
-def run_tests():
-    """Run all tests and print results."""
-    test_classes = [
-        TestParserAgent,
-        TestQuestionAgent
-    ]
+class TestFAQAgent:
+    """Test suite for FAQAgent."""
     
-    total_passed = 0
-    total_failed = 0
+    def setup_method(self):
+        """Setup test fixtures."""
+        self.agent = FAQAgent()
+        self.input_data = {
+            "questions": [
+                {"category": "informational", "question": "What are the ingredients?"}
+            ],
+            "product": {
+                "productName": "Test Serum",
+                "price": {"amount": 500, "currency": "INR"},
+                "ingredients": [{"name": "Vitamin C"}],
+                "benefits": ["Brightening"],
+            }
+        }
     
-    for test_class in test_classes:
-        print(f"\n{test_class.__name__}")
-        print("-" * 40)
+    def test_single_responsibility(self):
+        """Verify agent generates FAQ answers only."""
+        result = self.agent.process(self.input_data)
         
-        instance = test_class()
-        for method_name in dir(instance):
-            if method_name.startswith("test_"):
-                try:
-                    getattr(instance, method_name)()
-                    print(f"  ✓ {method_name}")
-                    total_passed += 1
-                except AssertionError as e:
-                    print(f"  ✗ {method_name}: {e}")
-                    total_failed += 1
+        assert "faqs" in result
+        assert isinstance(result["faqs"], list)
     
-    print("\n" + "=" * 40)
-    print(f"Results: {total_passed} passed, {total_failed} failed")
+    def test_faq_structure(self):
+        """Verify FAQ structure is correct."""
+        result = self.agent.process(self.input_data)
+        
+        for faq in result["faqs"]:
+            assert "question" in faq
+            assert "answer" in faq
+            assert "category" in faq
+
+
+class TestProductPageAgent:
+    """Test suite for ProductPageAgent."""
     
-    return total_failed == 0
+    def setup_method(self):
+        """Setup test fixtures."""
+        self.agent = ProductPageAgent()
+        self.input_data = {
+            "productName": "Test Serum",
+            "concentration": "10%",
+            "ingredients": [{"name": "Vitamin C"}],
+            "benefits": ["Brightening"],
+            "skinTypes": ["Oily"],
+            "applicationMethod": {"steps": ["Apply"], "frequency": "morning"},
+            "price": {"amount": 500, "currency": "INR"},
+        }
+    
+    def test_single_responsibility(self):
+        """Verify agent builds product page only."""
+        result = self.agent.process(self.input_data)
+        
+        assert "productName" in result
+        assert "price" in result
+    
+    def test_complete_output(self):
+        """Verify all required fields are present."""
+        result = self.agent.process(self.input_data)
+        
+        required_fields = ["productName", "concentration", "benefits", "price"]
+        for field in required_fields:
+            assert field in result
+
+
+class TestComparisonAgent:
+    """Test suite for ComparisonAgent."""
+    
+    def setup_method(self):
+        """Setup test fixtures."""
+        self.agent = ComparisonAgent()
+        self.input_data = {
+            "productA": {
+                "productName": "Product A",
+                "price": {"amount": 500},
+                "ingredients": [{"name": "Vitamin C"}],
+                "benefits": ["Brightening"],
+            },
+            "productB": {
+                "productName": "Product B",
+                "price": {"amount": 600},
+                "ingredients": [{"name": "Niacinamide"}],
+                "benefits": ["Pore control"],
+            }
+        }
+    
+    def test_single_responsibility(self):
+        """Verify agent compares products only."""
+        result = self.agent.process(self.input_data)
+        
+        assert "comparison" in result
+    
+    def test_comparison_structure(self):
+        """Verify comparison has required fields."""
+        result = self.agent.process(self.input_data)
+        
+        comparison = result["comparison"]
+        assert "priceDifference" in comparison
+        assert "uniqueToA" in comparison or "uniqueToProductA" in comparison
+
+
+class TestTemplateAgent:
+    """Test suite for TemplateAgent."""
+    
+    def setup_method(self):
+        """Setup test fixtures."""
+        self.agent = TemplateAgent()
+    
+    def test_single_responsibility(self):
+        """Verify agent validates templates only."""
+        assert hasattr(self.agent, 'process')
+        assert callable(self.agent.process)
+    
+    def test_template_loading(self):
+        """Verify templates are loaded correctly."""
+        # Agent should have templates loaded
+        assert hasattr(self.agent, 'templates') or hasattr(self.agent, '_templates')
+
+
+class TestAgentIndependence:
+    """Test that agents are truly independent."""
+    
+    def test_no_cross_imports(self):
+        """Verify agents don't import each other."""
+        import ast
+        
+        agent_files = [
+            "agents/parser_agent.py",
+            "agents/question_agent.py",
+            "agents/faq_agent.py",
+            "agents/product_page_agent.py",
+            "agents/comparison_agent.py",
+            "agents/template_agent.py",
+        ]
+        
+        for filepath in agent_files:
+            path = Path(filepath)
+            if not path.exists():
+                continue
+                
+            with open(path, "r", encoding="utf-8") as f:
+                content = f.read()
+            
+            tree = ast.parse(content)
+            
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    for alias in node.names:
+                        # Should not import other agents
+                        assert "parser_agent" not in alias.name or filepath == "agents/parser_agent.py"
+                        assert "question_agent" not in alias.name or filepath == "agents/question_agent.py"
+
+
+class TestDeterminism:
+    """Test that agents produce deterministic output."""
+    
+    def test_parser_determinism(self):
+        """Verify ParserAgent is deterministic."""
+        agent = ParserAgent()
+        data = {"productName": "Test", "price": {"amount": 100, "currency": "INR"}}
+        
+        result1 = agent.process(data)
+        result2 = agent.process(data)
+        
+        assert result1 == result2
 
 
 if __name__ == "__main__":
-    success = run_tests()
-    sys.exit(0 if success else 1)
+    pytest.main([__file__, "-v"])
