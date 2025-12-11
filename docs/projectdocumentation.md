@@ -2,33 +2,24 @@
 
 ## Problem Statement
 
-Design and implement a modular agentic automation system that takes a product dataset and automatically generates structured, machine-readable content pages including FAQ, Product Description, and Comparison pages.
+Design and implement a modular agentic automation system using **LangGraph** that takes a product dataset and automatically generates structured, machine-readable content pages including FAQ, Product Description, and Comparison pages.
 
 ## Solution Overview
 
-A **DAG-based multi-agent system** with an orchestrator controlling specialized worker agents. The system follows these principles:
+A **LangGraph StateGraph-powered multi-agent system** with **real LLM API calls** for content generation.
 
-- **Single Responsibility**: Each agent handles one specific task
-- **Pure Functions**: Logic blocks are stateless transformations
-- **Deterministic Output**: Same input always produces same output
-- **No Hallucination**: All content derives from provided data
+### Key Technologies
 
-## Scopes & Assumptions
+| Component | Technology |
+|-----------|------------|
+| Framework | **LangGraph** (StateGraph) |
+| LLM Providers | Ollama (local), Gemini, OpenAI |
+| Backend | FastAPI |
+| Frontend | Vanilla HTML/CSS/JS |
+| State Management | TypedDict |
+| Output Parsing | Pydantic + JsonOutputParser |
 
-### In Scope
-- Single product dataset processing (GlowBoost Vitamin C Serum)
-- Fictional Product B for comparison (ClearGlow Niacinamide Serum)
-- 3 output pages: FAQ, Product Description, Comparison
-- Rule-based content generation (no LLM/AI dependencies)
-
-### Assumptions
-- Product data structure remains consistent
-- All transformations are deterministic
-- JSON is the sole output format
-
-## System Design
-
-### Architecture Overview
+## System Architecture
 
 ```mermaid
 flowchart TB
@@ -37,24 +28,22 @@ flowchart TB
         PDB["product_b_data.json"]
     end
 
-    subgraph Orchestrator["Orchestrator (DAG Controller)"]
-        ORCH[["orchestrator.py"]]
+    subgraph LangGraph["LangGraph StateGraph"]
+        START((Start)) --> PARSE["parse_products_node"]
+        PARSE --> LOGIC["run_logic_blocks_node"]
+        LOGIC --> QUESTIONS["generate_questions_node<br/>🤖 LLM"]
+        QUESTIONS --> FAQ["generate_faq_node<br/>🤖 LLM"]
+        FAQ --> PRODUCT["generate_product_node<br/>🤖 LLM"]
+        PRODUCT --> COMPARE["generate_comparison_node<br/>🤖 LLM"]
+        COMPARE --> WRITE["write_outputs_node"]
+        WRITE --> END((End))
     end
 
-    subgraph Agents["Agent Layer"]
-        PA["Parser Agent"]
-        QA["Question Agent"]
-        FAQA["FAQ Agent"]
-        PPA["Product Page Agent"]
-        CA["Comparison Agent"]
-        TA["Template Agent"]
-    end
-
-    subgraph LogicBlocks["Logic Blocks"]
-        BB["benefits_block"]
-        UB["usage_block"]
-        IB["ingredient_block"]
-        CB["comparison_block"]
+    subgraph Agents["Independent Agent Classes"]
+        QA["QuestionGeneratorAgent"]
+        FA["FAQGeneratorAgent"]
+        PA["ProductPageAgent"]
+        CA["ComparisonAgent"]
     end
 
     subgraph Output["Output Layer"]
@@ -63,72 +52,87 @@ flowchart TB
         CPJ["comparison_page.json"]
     end
 
-    PD --> ORCH
-    PDB --> ORCH
-    ORCH --> PA
-    PA --> BB & UB & IB & CB
-    PA --> QA
-    BB & UB & IB --> FAQA & PPA
-    CB --> CA
-    QA --> FAQA
-    FAQA --> TA
-    PPA --> TA
-    CA --> TA
-    TA --> FJ & PPJ & CPJ
+    PD --> START
+    PDB --> START
+    QUESTIONS -.->|instantiates| QA
+    FAQ -.->|instantiates| FA
+    PRODUCT -.->|instantiates| PA
+    COMPARE -.->|instantiates| CA
+    WRITE --> FJ & PPJ & CPJ
 ```
 
-### Execution Flow (DAG)
+## Agent Independence
+
+Each agent in `agents/llm_agents.py` is a **self-contained class** that:
+
+1. Has its **own LLM instance** (not shared)
+2. Defines its **own system prompt**
+3. Can **run independently** without the orchestrator
+4. Makes **real LLM API calls**
+
+```python
+class QuestionGeneratorAgent(BaseAgent):
+    def __init__(self):
+        super().__init__("QuestionGeneratorAgent")
+        # Gets own LLM via get_llm() factory
+    
+    def get_system_prompt(self) -> str:
+        return """You are a product content expert..."""
+    
+    def run(self, input_data: Dict) -> Dict:
+        chain = prompt | self.llm | JsonOutputParser()
+        return chain.invoke(input_data)
+```
+
+## LangGraph Execution Flow
 
 ```mermaid
-graph LR
-    A[Raw Data] --> B[Parser Agent]
-    B --> C[Logic Blocks]
-    B --> D[Question Agent]
-    C --> E[Page Agents]
-    D --> E
-    E --> F[Template Agent]
-    F --> G[JSON Output]
+sequenceDiagram
+    participant G as LangGraph
+    participant N as Nodes
+    participant A as Independent Agents
+    participant L as LLM (Ollama/Gemini)
+
+    G->>N: parse_products_node
+    N-->>G: product_a, product_b
+    
+    G->>N: generate_questions_node
+    N->>A: QuestionGeneratorAgent()
+    A->>L: Prompt via LangChain
+    L-->>A: JSON response
+    A-->>N: 21 questions
+    N-->>G: questions
+    
+    Note over G,L: Each agent has own LLM instance
 ```
 
-### Agent Responsibilities
+## Project Structure
 
-| Agent | Input | Output | Responsibility |
-|-------|-------|--------|----------------|
-| Parser | Raw JSON | ProductModel | Data validation & normalization |
-| Question | ProductModel | 15+ Questions | Generate categorized questions |
-| FAQ | Questions + Blocks | FAQ Page | Generate Q&A pairs |
-| Product Page | Model + Blocks | Product Page | Generate product description |
-| Comparison | A, B + Blocks | Comparison Page | Generate product comparison |
-| Template | Page Data | Validated JSON | Fill templates & validate |
-| Orchestrator | All | 3 JSON files | DAG execution & coordination |
-
-### Logic Blocks (Pure Functions)
-
-| Block | Input | Output |
-|-------|-------|--------|
-| `process_benefits()` | ProductModel | benefitList, count, primary |
-| `process_usage()` | ProductModel | instructions, frequency, quantity |
-| `process_ingredients()` | ProductModel | ingredientList, concentration |
-| `compare_products()` | A, B | common, unique, price diff |
-
-### Template System
-
-Each template defines:
-- **fields**: Required output fields
-- **rules**: Validation rules (min/max length, patterns)
-- **blockDependencies**: Which logic blocks provide data
-- **agentDependencies**: Which agents must run before
-
-### Running the System
-
-```bash
-python -m agents.orchestrator
+```
+kasparro-agentic/
+├── agents/
+│   ├── llm_agents.py     # Independent agent classes
+│   ├── nodes.py          # LangGraph node functions
+│   └── graph.py          # LangGraph StateGraph
+├── core/
+│   ├── graph_state.py    # TypedDict state
+│   ├── llm_factory.py    # Multi-provider LLM factory
+│   └── schemas.py        # Pydantic output schemas
+├── api/
+│   └── main.py           # FastAPI REST API
+├── frontend/
+│   ├── index.html
+│   ├── styles.css
+│   └── app.js            # Dynamic loading (no hardcoded fallbacks)
+├── output/               # LLM-generated JSON
+├── pyproject.toml        # Proper Python package
+└── requirements.txt
 ```
 
-### Output Structure
+## Output Structure
 
-All outputs are strict JSON with `lowerCamelCase` keys:
+All outputs are **LLM-generated** JSON:
 
-- `output/faq.json` - Min 5 Q&As with categories
-- `output/product_page.json` - Complete product information
-- `output/comparison_page.json` - Structured A vs B comparison
+- `faq.json` - 20+ Q&A pairs generated by FAQGeneratorAgent
+- `product_page.json` - Product description by ProductPageAgent
+- `comparison_page.json` - A vs B comparison by ComparisonAgent

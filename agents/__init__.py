@@ -1,22 +1,28 @@
 """
 Agents Package
 
-This package contains all agent classes for the multi-agent content generation system.
-Each agent follows single-responsibility principle with defined input/output.
+This package contains the LangGraph-based multi-agent content generation system.
+- graph.py: LangGraph StateGraph orchestrator
+- llm_agents.py: Independent agent classes with own LLM instances
+- nodes.py: Node functions for the StateGraph
 """
 
-from agents.parser_agent import ParserAgent
-from agents.question_agent import QuestionAgent
-from agents.faq_agent import FAQAgent
-from agents.product_page_agent import ProductPageAgent
-from agents.comparison_agent import ComparisonAgent
-from agents.template_agent import TemplateAgent
+from agents.llm_agents import (
+    BaseAgent,
+    QuestionGeneratorAgent,
+    FAQGeneratorAgent,
+    ProductPageAgent,
+    ComparisonAgent
+)
+
+from agents.graph import build_pipeline_graph, run_pipeline
 
 __all__ = [
-    "ParserAgent",
-    "QuestionAgent",
-    "FAQAgent",
+    "BaseAgent",
+    "QuestionGeneratorAgent",
+    "FAQGeneratorAgent",
     "ProductPageAgent",
     "ComparisonAgent",
-    "TemplateAgent"
+    "build_pipeline_graph",
+    "run_pipeline"
 ]

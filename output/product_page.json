@@ -1,32 +1,36 @@
 {
   "productName": "GlowBoost Vitamin C Serum",
-  "concentration": "10% Vitamin C",
+  "concentration": "10%",
   "skinTypes": [
+    "Normal",
+    "Dry",
     "Oily",
     "Combination"
   ],
   "keyIngredients": [
     "Vitamin C",
+    "Niacinamide",
     "Hyaluronic Acid"
   ],
   "benefits": {
-    "items": [
-      "Brightening",
-      "Fades dark spots"
-    ],
     "primary": "Brightening",
-    "count": 2
+    "count": 2,
+    "description": "Fades dark spots and evens out skin tone.",
+    "items": [
+      "Reduces appearance of fine lines and wrinkles",
+      "Hydrates and plumps the skin"
+    ]
   },
   "usage": {
-    "instructions": "Apply 2–3 drops in the morning before sunscreen",
-    "frequency": "morning",
-    "quantity": "2–3 drops",
-    "timing": "before sunscreen"
+    "instructions": "Apply a few drops to your face and neck after cleansing and toning.",
+    "frequency": "Daily",
+    "quantity": "2-3 drops",
+    "timing": "Morning and night",
+    "tips": "Use in the morning for a radiant glow, and at night to help with skin regeneration."
   },
   "sideEffects": "Mild tingling for sensitive skin",
   "price": {
-    "amount": 699.0,
+    "amount": 699,
     "currency": "INR"
-  },
-  "generatedAt": "2025-12-09T05:39:28.591025+00:00"
+  }
 }

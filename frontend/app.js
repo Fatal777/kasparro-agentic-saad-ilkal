@@ -1,5 +1,7 @@
 /**
  * Multi-Agent Content Generation System - Interactive Frontend
+ * 
+ * NO HARDCODED FALLBACKS - All content is dynamically loaded from the LangGraph API
  */
 
 const API_BASE_URL = window.location.hostname === 'localhost'
@@ -25,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initTabs();
     initCategoryFilter();
     initPipelineButton();
-    // Load outputs immediately on page load with a small delay to ensure DOM is ready
+    // Load outputs from API
     setTimeout(() => {
         loadAllOutputs();
     }, 100);
@@ -99,102 +101,75 @@ async function runPipeline() {
     runPipelineBtn.innerHTML = '⏳ Running...';
     statusBadge.className = 'console-badge running';
     statusBadge.textContent = 'Running';
-
-    // Auto-scroll to architecture section
-    document.getElementById('architecture').scrollIntoView({ behavior: 'smooth' });
-
-    await sleep(500);
-
-    // Clear log
     executionLog.innerHTML = '';
-    resetPipeline();
 
-    // Pipeline steps with better console output
-    const steps = [
-        { node: 'node-input', arrow: null, icon: '📄', msg: 'Loading product_data.json and product_b_data.json', type: 'info' },
-        { node: 'node-parser', arrow: 'arrow-1', icon: '🔍', msg: 'Parser Agent: Converting raw data to ProductModel', type: 'info' },
-        { node: null, arrow: null, icon: '✓', msg: 'Parsed: GlowBoost Vitamin C Serum', type: 'success' },
-        { node: null, arrow: null, icon: '✓', msg: 'Parsed: ClearGlow Niacinamide Serum', type: 'success' },
-        { node: 'node-logic', arrow: 'arrow-2', icon: '⚙️', msg: 'Running Logic Blocks (pure functions)', type: 'info' },
-        { node: null, arrow: null, icon: '→', msg: 'benefits_block() → 2 benefits extracted', type: 'info' },
-        { node: null, arrow: null, icon: '→', msg: 'usage_block() → frequency: morning', type: 'info' },
-        { node: null, arrow: null, icon: '→', msg: 'ingredient_block() → 2 ingredients', type: 'info' },
-        { node: null, arrow: null, icon: '→', msg: 'comparison_block() → price diff: ₹100', type: 'info' },
-        { node: 'node-agents', arrow: 'arrow-3', icon: '🤖', msg: 'Page Agents generating content', type: 'info' },
-        { node: null, arrow: null, icon: '✓', msg: 'QuestionAgent: Generated 21 questions', type: 'success' },
-        { node: null, arrow: null, icon: '✓', msg: 'FAQAgent: Created 19 Q&A pairs', type: 'success' },
-        { node: null, arrow: null, icon: '✓', msg: 'ProductPageAgent: Built product page', type: 'success' },
-        { node: null, arrow: null, icon: '✓', msg: 'ComparisonAgent: Compared A vs B', type: 'success' },
-        { node: 'node-output', arrow: 'arrow-4', icon: '📦', msg: 'TemplateAgent validating and writing JSON', type: 'info' },
-        { node: null, arrow: null, icon: '✓', msg: 'Written: output/faq.json (19 Q&As)', type: 'success' },
-        { node: null, arrow: null, icon: '✓', msg: 'Written: output/product_page.json', type: 'success' },
-        { node: null, arrow: null, icon: '✓', msg: 'Written: output/comparison_page.json', type: 'success' },
-    ];
-
-    for (const step of steps) {
-        if (step.arrow) activateArrow(step.arrow);
-        if (step.node) activateNode(step.node);
-
-        addLogEntry(step.icon, step.msg, step.type);
-        await sleep(180);
-
-        if (step.node) completeNode(step.node);
-    }
-
-    // Try actual API call
     try {
+        addLogEntry('🚀', 'Starting LangGraph pipeline...', 'info');
+
+        const stages = [
+            { id: 'parser', name: 'Parse Products', icon: '📦', delay: 800 },
+            { id: 'logic', name: 'Run Logic Blocks', icon: '🔧', delay: 800 },
+            { id: 'question', name: 'Generate Questions (LLM)', icon: '❓', delay: 3000 },
+            { id: 'faq', name: 'Generate FAQ (LLM)', icon: '📝', delay: 3000 },
+            { id: 'product', name: 'Generate Product Page (LLM)', icon: '🛍️', delay: 2000 },
+            { id: 'comparison', name: 'Generate Comparison (LLM)', icon: '⚖️', delay: 2000 },
+            { id: 'template', name: 'Write Outputs', icon: '✨', delay: 500 }
+        ];
+
+        // Animate stages
+        for (let i = 0; i < stages.length; i++) {
+            const stage = stages[i];
+            activateNode(stage.id);
+            addLogEntry(stage.icon, `${stage.name}...`, 'info');
+            await sleep(stage.delay);
+            completeNode(stage.id);
+            if (i < stages.length - 1) activateArrow(`arrow-${i + 1}`);
+        }
+
+        // Call actual API
+        addLogEntry('📡', 'Calling API with LangGraph pipeline...', 'info');
         const response = await fetch(`${API_BASE_URL}/run-pipeline`, { method: 'POST' });
         const result = await response.json();
-        if (result.success) {
-            addLogEntry('🎉', `Pipeline completed in ${result.execution_time_ms?.toFixed(0)}ms`, 'success');
+
+        if (response.ok && result.success) {
+            addLogEntry('✅', `Pipeline completed in ${(result.execution_time_ms / 1000).toFixed(1)}s`, 'success');
+            statusBadge.className = 'console-badge idle';
+            statusBadge.textContent = 'Complete';
+
+            // Reload outputs from API
+            await loadAllOutputs();
+
+            // Scroll to outputs
+            await sleep(800);
+            const outputSection = document.getElementById('output-section');
+            if (outputSection) {
+                outputSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        } else {
+            throw new Error(result.detail || result.message || 'Pipeline failed');
         }
+
     } catch (e) {
-        addLogEntry('⚡', 'Loaded from cache (API not connected)', 'warning');
+        addLogEntry('❌', `Error: ${e.message}`, 'error');
+        statusBadge.className = 'console-badge error';
+        statusBadge.textContent = 'Error';
+    } finally {
+        isRunning = false;
+        runPipelineBtn.disabled = false;
+        runPipelineBtn.innerHTML = '▶ Run Pipeline';
     }
-
-    statusBadge.className = 'console-badge success';
-    statusBadge.textContent = 'Completed';
-
-    // Load outputs first
-    await loadAllOutputs();
-
-    // Wait a bit then scroll to outputs
-    await sleep(800);
-
-    // Scroll to outputs section
-    const outputsSection = document.getElementById('outputs');
-    if (outputsSection) {
-        outputsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-
-    isRunning = false;
-    runPipelineBtn.disabled = false;
-    runPipelineBtn.innerHTML = '<svg class="play-icon" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Run Pipeline';
-}
-
-// Pipeline Animation Helpers
-function resetPipeline() {
-    document.querySelectorAll('.pipeline-node').forEach(n => {
-        n.classList.remove('active', 'completed');
-        n.querySelector('.node-status').textContent = 'Waiting';
-    });
-    document.querySelectorAll('.pipeline-arrow').forEach(a => a.classList.remove('active', 'completed'));
 }
 
 function activateNode(id) {
-    const node = document.getElementById(id);
-    if (node) {
-        node.classList.add('active');
-        node.querySelector('.node-status').textContent = 'Processing';
-    }
+    const node = document.querySelector(`[data-node="${id}"]`);
+    if (node) node.classList.add('active');
 }
 
 function completeNode(id) {
-    const node = document.getElementById(id);
+    const node = document.querySelector(`[data-node="${id}"]`);
     if (node) {
         node.classList.remove('active');
         node.classList.add('completed');
-        node.querySelector('.node-status').textContent = 'Done';
     }
 }
 
@@ -215,9 +190,9 @@ function addLogEntry(icon, message, type = 'info') {
     executionLog.scrollTop = executionLog.scrollHeight;
 }
 
-// Load All Outputs
+// Load All Outputs - NO HARDCODED FALLBACKS
 async function loadAllOutputs() {
-    console.log('Loading all outputs...');
+    console.log('Loading all outputs from API...');
     try {
         await Promise.all([loadFAQ(), loadProduct(), loadComparison()]);
         console.log('All outputs loaded successfully');
@@ -226,155 +201,130 @@ async function loadAllOutputs() {
     }
 }
 
+// Show placeholder message when API data not available
+function showPlaceholder(element, message) {
+    if (element) {
+        element.innerHTML = `
+            <div style="padding: 2rem; text-align: center; opacity: 0.6;">
+                <div style="font-size: 2rem; margin-bottom: 0.5rem;">📭</div>
+                <div>${message}</div>
+                <div style="margin-top: 1rem; font-size: 0.85rem;">
+                    Click <strong>Run Pipeline</strong> to generate content with LLM
+                </div>
+            </div>
+        `;
+    }
+}
+
 async function loadFAQ() {
-    console.log('Loading FAQ...');
-    let data = null;
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/outputs/faq`);
-        if (response.ok) {
-            data = await response.json();
-            console.log('FAQ loaded from API');
-        }
-    } catch (e) {
-        console.log('API not available, using fallback FAQ data');
-    }
-
-    // Always use fallback if no data
-    if (!data) {
-        data = {
-            totalQuestions: 19,
-            faqs: [
-                { category: "informational", question: "What are the key ingredients in GlowBoost Vitamin C Serum?", answer: "The key ingredients are Vitamin C and Hyaluronic Acid." },
-                { category: "informational", question: "What are the main benefits?", answer: "The main benefits include Brightening and Fades dark spots." },
-                { category: "informational", question: "What skin types is it suitable for?", answer: "Suitable for Oily and Combination skin types." },
-                { category: "informational", question: "What is the concentration?", answer: "Contains 10% Vitamin C." },
-                { category: "safety", question: "Are there any side effects?", answer: "Possible side effects include mild tingling for sensitive skin." },
-                { category: "safety", question: "Is it safe for sensitive skin?", answer: "A patch test is recommended before regular use." },
-                { category: "usage", question: "How should I apply it?", answer: "Apply 2-3 drops in the morning before sunscreen." },
-                { category: "usage", question: "When is the best time to use it?", answer: "The best time is in the morning, before sunscreen." },
-                { category: "purchase", question: "How much does it cost?", answer: "GlowBoost Vitamin C Serum is priced at ₹699." },
-                { category: "purchase", question: "Where can I buy it?", answer: "Available from authorized retailers and online stores." }
-            ]
-        };
-        console.log('Using fallback FAQ data');
-    }
-
+    console.log('Loading FAQ from API...');
     const faqCountEl = document.getElementById('faq-count');
     const faqContentEl = document.getElementById('faq-content');
 
-    if (faqCountEl) {
-        faqCountEl.textContent = `${data.totalQuestions} Q&As`;
-    }
+    try {
+        const response = await fetch(`${API_BASE_URL}/outputs/faq`);
+        if (!response.ok) {
+            throw new Error('FAQ not available');
+        }
 
-    if (faqContentEl) {
-        faqContentEl.innerHTML = `<div class="faq-list">${data.faqs.map(faq => `
-            <div class="faq-item" data-category="${faq.category}">
-                <div class="faq-category">${faq.category}</div>
-                <div class="faq-question">${faq.question}</div>
-                <div class="faq-answer">${faq.answer}</div>
-            </div>
-        `).join('')}</div>`;
-        console.log('FAQ content rendered');
+        const data = await response.json();
+        console.log('FAQ loaded from API:', data.totalQuestions || data.faqs?.length, 'items');
+
+        if (faqCountEl) {
+            faqCountEl.textContent = `${data.totalQuestions || data.faqs?.length || 0} Q&As`;
+        }
+
+        if (faqContentEl && data.faqs) {
+            faqContentEl.innerHTML = `<div class="faq-list">${data.faqs.map(faq => `
+                <div class="faq-item" data-category="${faq.category}">
+                    <div class="faq-category">${faq.category}</div>
+                    <div class="faq-question">${faq.question}</div>
+                    <div class="faq-answer">${faq.answer}</div>
+                </div>
+            `).join('')}</div>`;
+        }
+    } catch (e) {
+        console.log('FAQ not available:', e.message);
+        if (faqCountEl) faqCountEl.textContent = '0 Q&As';
+        showPlaceholder(faqContentEl, 'FAQ content not yet generated');
     }
 }
 
 async function loadProduct() {
-    console.log('Loading Product...');
-    let data = null;
+    console.log('Loading Product from API...');
+    const productContentEl = document.getElementById('product-content');
 
     try {
         const response = await fetch(`${API_BASE_URL}/outputs/product`);
-        if (response.ok) {
-            data = await response.json();
-            console.log('Product loaded from API');
+        if (!response.ok) {
+            throw new Error('Product not available');
+        }
+
+        const data = await response.json();
+        console.log('Product loaded from API:', data.productName);
+
+        if (productContentEl) {
+            const currency = data.price?.currency === 'INR' ? '₹' : (data.price?.currency || '₹');
+            productContentEl.innerHTML = `
+                <div style="display:grid;gap:1.25rem;">
+                    <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:700;">${data.productName}</div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;">
+                        <div><span style="opacity:0.6;font-size:0.85rem;">Concentration</span><div style="font-weight:600;">${data.concentration || 'N/A'}</div></div>
+                        <div><span style="opacity:0.6;font-size:0.85rem;">Price</span><div style="font-weight:700;font-size:1.5rem;">${currency}${data.price?.amount || 0}</div></div>
+                    </div>
+                    <div><span style="opacity:0.6;font-size:0.85rem;">Skin Types</span><div style="margin-top:0.5rem;">${(data.skinTypes || []).map(t => `<span class="tag">${t}</span>`).join(' ')}</div></div>
+                    <div><span style="opacity:0.6;font-size:0.85rem;">Key Ingredients</span><div style="margin-top:0.5rem;">${(data.keyIngredients || []).map(i => `<span class="tag">${i}</span>`).join(' ')}</div></div>
+                    <div><span style="opacity:0.6;font-size:0.85rem;">Benefits</span><div style="margin-top:0.5rem;">${(data.benefits?.items || []).map(b => `<span class="tag">${b}</span>`).join(' ')}</div></div>
+                    <div><span style="opacity:0.6;font-size:0.85rem;">How to Use</span><div style="margin-top:0.5rem;">${data.usage?.instructions || data.usage || ''}</div></div>
+                </div>`;
         }
     } catch (e) {
-        console.log('API not available, using fallback Product data');
-    }
-
-    if (!data) {
-        data = {
-            productName: "GlowBoost Vitamin C Serum",
-            concentration: "10% Vitamin C",
-            skinTypes: ["Oily", "Combination"],
-            keyIngredients: ["Vitamin C", "Hyaluronic Acid"],
-            benefits: { items: ["Brightening", "Fades dark spots"], primary: "Brightening", count: 2 },
-            usage: { instructions: "Apply 2–3 drops in the morning before sunscreen", frequency: "morning" },
-            sideEffects: "Mild tingling for sensitive skin",
-            price: { amount: 699, currency: "INR" }
-        };
-        console.log('Using fallback Product data');
-    }
-
-    const productContentEl = document.getElementById('product-content');
-    if (productContentEl) {
-        const currency = data.price?.currency === 'INR' ? '₹' : (data.price?.currency || '₹');
-        productContentEl.innerHTML = `
-            <div style="display:grid;gap:1.25rem;">
-                <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:700;">${data.productName}</div>
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;">
-                    <div><span style="opacity:0.6;font-size:0.85rem;">Concentration</span><div style="font-weight:600;">${data.concentration}</div></div>
-                    <div><span style="opacity:0.6;font-size:0.85rem;">Price</span><div style="font-weight:700;font-size:1.5rem;">${currency}${data.price?.amount || 699}</div></div>
-                </div>
-                <div><span style="opacity:0.6;font-size:0.85rem;">Skin Types</span><div style="margin-top:0.5rem;">${(data.skinTypes || []).map(t => `<span class="tag">${t}</span>`).join(' ')}</div></div>
-                <div><span style="opacity:0.6;font-size:0.85rem;">Key Ingredients</span><div style="margin-top:0.5rem;">${(data.keyIngredients || []).map(i => `<span class="tag">${i}</span>`).join(' ')}</div></div>
-                <div><span style="opacity:0.6;font-size:0.85rem;">Benefits</span><div style="margin-top:0.5rem;">${(data.benefits?.items || []).map(b => `<span class="tag">${b}</span>`).join(' ')}</div></div>
-                <div><span style="opacity:0.6;font-size:0.85rem;">How to Use</span><div style="margin-top:0.5rem;">${data.usage?.instructions || ''}</div></div>
-            </div>`;
-        console.log('Product content rendered');
+        console.log('Product not available:', e.message);
+        showPlaceholder(productContentEl, 'Product page not yet generated');
     }
 }
 
 async function loadComparison() {
-    console.log('Loading Comparison...');
-    let data = null;
+    console.log('Loading Comparison from API...');
+    const comparisonContentEl = document.getElementById('comparison-content');
 
     try {
         const response = await fetch(`${API_BASE_URL}/outputs/comparison`);
-        if (response.ok) {
-            data = await response.json();
-            console.log('Comparison loaded from API');
+        if (!response.ok) {
+            throw new Error('Comparison not available');
+        }
+
+        const data = await response.json();
+        console.log('Comparison loaded from API');
+
+        if (comparisonContentEl) {
+            comparisonContentEl.innerHTML = `
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;">
+                    <div style="padding:1.5rem;background:var(--bg);border-radius:12px;border:1px solid var(--border);">
+                        <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;color:var(--text-secondary);margin-bottom:0.5rem;">Product A</div>
+                        <div style="font-weight:700;font-size:1.1rem;margin-bottom:0.5rem;">${data.productA?.name || 'Product A'}</div>
+                        <div style="font-size:1.75rem;font-weight:700;margin-bottom:1rem;">₹${data.productA?.price || 0}</div>
+                        <div style="font-size:0.85rem;opacity:0.7;">${(data.productA?.benefits || []).join(' • ')}</div>
+                    </div>
+                    <div style="padding:1.5rem;background:var(--bg);border-radius:12px;border:1px solid var(--border);">
+                        <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;color:var(--text-secondary);margin-bottom:0.5rem;">Product B</div>
+                        <div style="font-weight:700;font-size:1.1rem;margin-bottom:0.5rem;">${data.productB?.name || 'Product B'}</div>
+                        <div style="font-size:1.75rem;font-weight:700;margin-bottom:1rem;">₹${data.productB?.price || 0}</div>
+                        <div style="font-size:0.85rem;opacity:0.7;">${(data.productB?.benefits || []).join(' • ')}</div>
+                    </div>
+                </div>
+                <div style="padding:1.5rem;background:var(--bg);border-radius:12px;border:1px solid var(--border);">
+                    <div style="font-weight:600;margin-bottom:1rem;">📊 Analysis</div>
+                    <div style="display:grid;gap:0.75rem;font-size:0.9rem;">
+                        <div><span style="opacity:0.6;">Price Difference:</span> <strong>₹${Math.abs(data.comparison?.priceDifference || 0)}</strong></div>
+                        <div><span style="opacity:0.6;">More Affordable:</span> <strong>${data.comparison?.cheaperProduct === 'productA' ? data.productA?.name : data.productB?.name}</strong></div>
+                        <div style="padding-top:0.75rem;border-top:1px solid var(--border);"><span style="opacity:0.6;">Recommendation:</span> ${data.comparison?.recommendation || ''}</div>
+                    </div>
+                </div>`;
         }
     } catch (e) {
-        console.log('API not available, using fallback Comparison data');
-    }
-
-    if (!data) {
-        data = {
-            productA: { name: "GlowBoost Vitamin C Serum", price: 699, benefits: ["Brightening", "Fades dark spots"], ingredients: ["Vitamin C", "Hyaluronic Acid"] },
-            productB: { name: "ClearGlow Niacinamide Serum", price: 799, benefits: ["Reduces pores", "Controls oil"], ingredients: ["Niacinamide", "Salicylic Acid"] },
-            comparison: { priceDifference: 100, cheaperProduct: "productA", uniqueToA: ["Vitamin C", "Hyaluronic Acid"], uniqueToB: ["Niacinamide", "Salicylic Acid"], recommendation: "GlowBoost Vitamin C Serum is more affordable by ₹100. GlowBoost focuses on brightening while ClearGlow focuses on pore control." }
-        };
-        console.log('Using fallback Comparison data');
-    }
-
-    const comparisonContentEl = document.getElementById('comparison-content');
-    if (comparisonContentEl) {
-        comparisonContentEl.innerHTML = `
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;">
-                <div style="padding:1.5rem;background:var(--bg);border-radius:12px;border:1px solid var(--border);">
-                    <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;color:var(--text-secondary);margin-bottom:0.5rem;">Product A</div>
-                    <div style="font-weight:700;font-size:1.1rem;margin-bottom:0.5rem;">${data.productA?.name || 'GlowBoost'}</div>
-                    <div style="font-size:1.75rem;font-weight:700;margin-bottom:1rem;">₹${data.productA?.price || 699}</div>
-                    <div style="font-size:0.85rem;opacity:0.7;">${(data.productA?.benefits || []).join(' • ')}</div>
-                </div>
-                <div style="padding:1.5rem;background:var(--bg);border-radius:12px;border:1px solid var(--border);">
-                    <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;color:var(--text-secondary);margin-bottom:0.5rem;">Product B</div>
-                    <div style="font-weight:700;font-size:1.1rem;margin-bottom:0.5rem;">${data.productB?.name || 'ClearGlow'}</div>
-                    <div style="font-size:1.75rem;font-weight:700;margin-bottom:1rem;">₹${data.productB?.price || 799}</div>
-                    <div style="font-size:0.85rem;opacity:0.7;">${(data.productB?.benefits || []).join(' • ')}</div>
-                </div>
-            </div>
-            <div style="padding:1.5rem;background:var(--bg);border-radius:12px;border:1px solid var(--border);">
-                <div style="font-weight:600;margin-bottom:1rem;">📊 Analysis</div>
-                <div style="display:grid;gap:0.75rem;font-size:0.9rem;">
-                    <div><span style="opacity:0.6;">Price Difference:</span> <strong>₹${data.comparison?.priceDifference || 100}</strong></div>
-                    <div><span style="opacity:0.6;">More Affordable:</span> <strong>${data.comparison?.cheaperProduct === 'productA' ? data.productA?.name : data.productB?.name}</strong></div>
-                    <div style="padding-top:0.75rem;border-top:1px solid var(--border);"><span style="opacity:0.6;">Recommendation:</span> ${data.comparison?.recommendation || ''}</div>
-                </div>
-            </div>`;
-        console.log('Comparison content rendered');
+        console.log('Comparison not available:', e.message);
+        showPlaceholder(comparisonContentEl, 'Comparison page not yet generated');
     }
 }
 

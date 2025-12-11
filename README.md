@@ -1,53 +1,54 @@
 # Multi-Agent Content Generation System
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-black?style=for-the-badge&logo=vercel)](https://kasparro-agentic.vercel.app)
-[![Backend API](https://img.shields.io/badge/API-Render-46E3B7?style=for-the-badge&logo=render)](https://kasparro-content-api.onrender.com/api/health)
+[![LangGraph](https://img.shields.io/badge/Framework-LangGraph-blue?style=for-the-badge)](https://langchain-ai.github.io/langgraph/)
+[![Python](https://img.shields.io/badge/Python-3.10+-green?style=for-the-badge&logo=python)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/API-FastAPI-009688?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
 
-> 🔗 **[View Live Demo →](https://kasparro-agentic.vercel.app)**
-
-A production-grade, modular agentic automation system that takes product datasets and autonomously generates structured, machine-readable content pages.
+A production-grade, **LangGraph-powered** multi-agent system that takes product datasets and autonomously generates structured, machine-readable content pages using **real LLM API calls**.
 
 **Built by [Saad Ilkal](https://github.com/Fatal777)**
 
+---
+
 ## 🎯 Objective
 
-Design and implement a **DAG-based multi-agent system** that:
-- Parses product data into clean internal models
-- Generates 15+ categorized user questions
+Design and implement a **LangGraph StateGraph** multi-agent system with **independent agents** that:
+- Uses **real LLM calls** (Ollama/Gemini/OpenAI) for content generation
+- Orchestrates agents via **DAG-based state machine**
+- Each agent is **independent** with its own LLM instance
+- Generates 21+ categorized user questions via LLM
 - Assembles 3 content pages (FAQ, Product, Comparison)
-- Outputs strict JSON (no free text)
+- Outputs strict JSON (no hardcoded content)
 
 ---
 
 ## 🏗️ System Architecture
 
-### High-Level Overview
+### LangGraph StateGraph Pipeline
 
 ```mermaid
 flowchart TB
     subgraph Input["📥 Input Layer"]
-        PD[("product_data.json<br/>Product A")]
-        PDB[("product_b_data.json<br/>Product B (Fictional)")]
+        PD[("product_data.json")]
+        PDB[("product_b_data.json")]
     end
 
-    subgraph Orchestrator["🎛️ Orchestrator (DAG Controller)"]
-        ORCH[["orchestrator.py<br/>Controls execution order<br/>Manages message passing"]]
+    subgraph LangGraph["🔄 LangGraph StateGraph"]
+        START((Start)) --> PARSE["parse_products"]
+        PARSE --> LOGIC["run_logic_blocks"]
+        LOGIC --> QUESTIONS["generate_questions "]
+        QUESTIONS --> FAQ["generate_faq "]
+        FAQ --> PRODUCT["generate_product "]
+        PRODUCT --> COMPARE["generate_comparison "]
+        COMPARE --> WRITE["write_outputs"]
+        WRITE --> END((End))
     end
 
-    subgraph Agents["🤖 Agent Layer"]
-        PA["Parser Agent<br/>raw → model"]
-        QA["Question Agent<br/>model → 15+ questions"]
-        FAQA["FAQ Agent<br/>→ Q&A pairs"]
-        PPA["Product Page Agent<br/>→ product content"]
-        CA["Comparison Agent<br/>→ A vs B content"]
-        TA["Template Agent<br/>validate & write"]
-    end
-
-    subgraph LogicBlocks["⚙️ Logic Blocks (Pure Functions)"]
-        BB["benefits_block()"]
-        UB["usage_block()"]
-        IB["ingredient_block()"]
-        CB["comparison_block()"]
+    subgraph Agents["🤖 Independent Agent Classes"]
+        QA["QuestionGeneratorAgent"]
+        FA["FAQGeneratorAgent"]
+        PA["ProductPageAgent"]
+        CA["ComparisonAgent"]
     end
 
     subgraph Output["📤 Output Layer"]
@@ -56,57 +57,24 @@ flowchart TB
         CPJ[("comparison_page.json")]
     end
 
-    PD --> ORCH
-    PDB --> ORCH
-    ORCH --> PA
-    PA --> BB & UB & IB & CB
-    PA --> QA
-    BB & UB & IB --> FAQA & PPA
-    CB --> CA
-    QA --> FAQA
-    FAQA --> TA
-    PPA --> TA
-    CA --> TA
-    TA --> FJ & PPJ & CPJ
+    PD --> START
+    PDB --> START
+    QUESTIONS -.-> QA
+    FAQ -.-> FA
+    PRODUCT -.-> PA
+    COMPARE -.-> CA
+    WRITE --> FJ & PPJ & CPJ
 ```
 
-### Agent Communication Flow
+### Key Features
 
-```mermaid
-sequenceDiagram
-    participant O as Orchestrator
-    participant PA as Parser Agent
-    participant LB as Logic Blocks
-    participant QA as Question Agent
-    participant FA as FAQ Agent
-    participant PPA as Product Page Agent
-    participant CA as Comparison Agent
-    participant TA as Template Agent
-
-    O->>PA: raw_data
-    PA-->>O: ProductModel A & B
-    
-    O->>LB: ProductModel
-    LB-->>O: benefits_data, usage_data, ingredient_data
-    
-    O->>LB: ProductModel A & B
-    LB-->>O: comparison_data
-    
-    O->>QA: ProductModel
-    QA-->>O: QuestionSet (21 questions)
-    
-    O->>FA: ProductModel + QuestionSet + LogicBlock outputs
-    FA-->>O: FAQPageData
-    
-    O->>PPA: ProductModel + LogicBlock outputs
-    PPA-->>O: ProductPageData
-    
-    O->>CA: ProductModel A + B + comparison_data
-    CA-->>O: ComparisonPageData
-    
-    O->>TA: PageData + Template
-    TA-->>O: Validated JSON
-```
+| Feature | Implementation |
+|---------|----------------|
+| **Framework** | LangGraph StateGraph |
+| **LLM Providers** | Ollama (free local), Gemini, OpenAI |
+| **Independent Agents** | Each agent has own LLM instance |
+| **State Management** | TypedDict with Annotated fields |
+| **Output Parsing** | LangChain JsonOutputParser |
 
 ---
 
@@ -114,124 +82,152 @@ sequenceDiagram
 
 ```
 kasparro-agentic/
-├── agents/                      # Worker agents
-│   ├── orchestrator.py          # DAG controller (main entry point)
-│   ├── parser_agent.py          # Converts raw data → ProductModel
-│   ├── question_agent.py        # Generates 15+ categorized questions
-│   ├── faq_agent.py             # Generates FAQ page content
-│   ├── product_page_agent.py    # Generates product description
-│   ├── comparison_agent.py      # Generates comparison page
-│   └── template_agent.py        # Validates and writes JSON output
+├── agents/                      # LangGraph agents
+│   ├── graph.py                 # LangGraph StateGraph (entry point)
+│   ├── llm_agents.py            # Independent agent classes
+│   └── nodes.py                 # Node functions for graph
+│
+├── core/                        # Infrastructure
+│   ├── graph_state.py           # TypedDict state definition
+│   ├── llm_factory.py           # Multi-provider LLM factory
+│   └── schemas.py               # Pydantic output schemas
 │
 ├── logic_blocks/                # Pure function transformations
-│   ├── benefits_block.py        # Extract & structure benefits
-│   ├── usage_block.py           # Parse usage instructions
-│   ├── ingredient_block.py      # Extract ingredient info
-│   └── comparison_block.py      # Compare two products
+│   ├── benefits_block.py
+│   ├── usage_block.py
+│   └── comparison_block.py
 │
-├── core/                        # Production infrastructure
-│   ├── models.py                # Pydantic data models (type safety)
-│   ├── config.py                # Configuration management
-│   ├── logging.py               # Structured logging
-│   ├── errors.py                # Error handling & retry logic
-│   └── state.py                 # State persistence (checkpoints)
+├── api/                         # FastAPI REST API
+│   └── main.py
 │
-├── templates/                   # JSON template schemas
-│   ├── faq_template.json
-│   ├── product_template.json
-│   └── comparison_template.json
+├── frontend/                    # Web UI
+│   ├── index.html
+│   ├── styles.css
+│   └── app.js
 │
 ├── data/                        # Input data
-│   ├── product_data.json        # GlowBoost Vitamin C Serum
-│   └── product_b_data.json      # ClearGlow Niacinamide Serum (fictional)
+│   ├── product_data.json
+│   └── product_b_data.json
 │
-├── output/                      # Generated JSON outputs
+├── output/                      # LLM-generated outputs
 │   ├── faq.json
 │   ├── product_page.json
 │   └── comparison_page.json
 │
-├── tests/                       # Unit & integration tests
-│   ├── test_logic_blocks.py
-│   ├── test_agents.py
-│   └── test_orchestrator.py
+├── tests/                       # Pytest test suite
+│   └── test_graph.py
 │
-└── docs/
-    └── projectdocumentation.md  # System design documentation
+├── pyproject.toml               # Python package config
+└── requirements.txt             # Dependencies
 ```
 
 ---
 
 ## 🚀 Quick Start
 
-### Installation
+### 1. Installation
 
 ```bash
 # Clone the repository
-git clone <repo-url>
+git clone https://github.com/Fatal777/kasparro-agentic.git
 cd kasparro-agentic
 
 # Install dependencies
-pip install pydantic pydantic-settings
+pip install -r requirements.txt
+
+# Or install as package
+pip install -e .
 ```
 
-### Run the Pipeline
+### 2. Install Ollama (FREE Local LLM - Recommended)
+
+> ⚠️ **Ollama must be installed separately** - it is not a Python package.
+
+**Windows:**
+```bash
+# Download and install from:
+https://ollama.com/download/windows
+
+# After installation, open PowerShell and run:
+ollama pull llama3.2
+```
+
+**macOS:**
+```bash
+# Using Homebrew:
+brew install ollama
+
+# Or download from:
+https://ollama.com/download/mac
+
+# Pull a model:
+ollama pull llama3.2
+```
+
+**Linux:**
+```bash
+# One-line install:
+curl -fsSL https://ollama.com/install.sh | sh
+
+# Pull a model:
+ollama pull llama3.2
+```
+
+### 3. Configure LLM Provider
 
 ```bash
-python -m agents.orchestrator
+# Copy environment template
+cp .env.example .env
+
+# Edit .env and set your LLM provider:
+# - LLM_PROVIDER=ollama  (FREE, runs locally - no API key needed!)
+# - LLM_PROVIDER=gemini  (cloud, requires GOOGLE_API_KEY)
+# - LLM_PROVIDER=openai  (cloud, requires OPENAI_API_KEY)
+```
+
+### 4. Run the Pipeline
+
+```bash
+# Using Ollama (FREE local LLM)
+python -m agents.graph
+
+# Or start the FastAPI server
+uvicorn api.main:app --reload --port 8000
 ```
 
 ### Expected Output
 
 ```
 ============================================================
-Multi-Agent Content Generation System
+  Multi-Agent Content Generation System (LangGraph)
+  Rate Limit Mode: Sequential with 15s delays
 ============================================================
 
-[PARSE_PRODUCTS] Starting...
-  ✓ Parsed: GlowBoost Vitamin C Serum
-  ✓ Parsed: ClearGlow Niacinamide Serum
-[PARSE_PRODUCTS] Completed
+[Pipeline] Starting LangGraph execution...
+[Pipeline] 4 LLM calls with 15s delays = ~1 minute total
 
-[LOGIC_BLOCKS] Starting...
-  ✓ Benefits: 2 items
-  ✓ Usage: frequency=morning
-  ✓ Ingredients: 2 items
-  ✓ Comparison: price diff=₹100
-[LOGIC_BLOCKS] Completed
+[QuestionGeneratorAgent] Starting question generation via ollama API...
+[QuestionGeneratorAgent] Generated 19 questions via ollama
+  ⏳ Waiting 15s to avoid rate limits...
 
-[GENERATE_QUESTIONS] Starting...
-  ✓ Generated 21 questions
-    - informational: 8
-    - safety: 4
-    - usage: 4
-    - purchase: 3
-    - comparison: 2
-[GENERATE_QUESTIONS] Completed
+[FAQGeneratorAgent] Starting FAQ generation via ollama API...
+[FAQGeneratorAgent] Generated 19 FAQ answers via ollama
+  ⏳ Waiting 15s to avoid rate limits...
 
-[GENERATE_PAGES] Starting...
-  ✓ FAQ Page: 19 Q&As
-  ✓ Product Page: GlowBoost Vitamin C Serum
-  ✓ Comparison Page: GlowBoost vs ClearGlow
-[GENERATE_PAGES] Completed
+[ProductPageAgent] Starting product page generation via ollama API...
+[ProductPageAgent] Generated product page for GlowBoost Vitamin C Serum
+  ⏳ Waiting 15s to avoid rate limits...
 
-[FILL_TEMPLATES] Starting...
-  ✓ FAQ template validated
-  ✓ Product template validated
-  ✓ Comparison template validated
-[FILL_TEMPLATES] Completed
-
-[WRITE_OUTPUTS] Starting...
-  ✓ Written: output/faq.json
-  ✓ Written: output/product_page.json
-  ✓ Written: output/comparison_page.json
-[WRITE_OUTPUTS] Completed
+[ComparisonAgent] Starting product comparison via ollama API...
+[ComparisonAgent] Generated comparison via ollama
+  ⏳ Waiting 15s to avoid rate limits...
 
 ============================================================
-Pipeline completed successfully!
+  Pipeline completed successfully!
+  Execution time: 145.2s
 ============================================================
 
 ✅ Pipeline completed successfully!
-   Pipeline ID: 20251209_103000
 
 Output files:
   - faq: output/faq.json
@@ -243,256 +239,156 @@ Output files:
 
 ## 🧪 Testing
 
-### Run All Tests
-
 ```bash
-# Run all tests
+# Run all tests with pytest
 python -m pytest tests/ -v
 
-# Run individual test files
-python tests/test_logic_blocks.py
-python tests/test_agents.py
-python tests/test_orchestrator.py
-```
-
-### Test Specific Components
-
-```bash
-# Test logic blocks (pure functions)
-python -c "
-from logic_blocks import process_benefits
-result = process_benefits({'benefits': ['Brightening', 'Fades dark spots']})
-print(result)
-"
-
-# Test individual agent
-python -c "
-from agents.parser_agent import ParserAgent
-agent = ParserAgent()
-result = agent.process({
-    'productName': 'Test Product',
-    'keyIngredients': ['Vitamin C'],
-    'benefits': ['Brightening'],
-    'price': {'amount': 500, 'currency': 'INR'}
-})
-print(result)
-"
+# Test specific file
+python -m pytest tests/test_graph.py -v
 ```
 
 ---
 
 ## 📊 Agent Independence
 
-**Each agent is self-contained and can run independently:**
+Each agent is a **self-contained class** that can run independently:
 
-| Agent | Can Run Alone | Dependencies |
-|-------|---------------|--------------|
-| Parser Agent | ✅ Yes | None (first in DAG) |
-| Question Agent | ✅ Yes | Needs ProductModel dict |
-| FAQ Agent | ✅ Yes | Needs ProductModel + QuestionSet + block data |
-| Product Page Agent | ✅ Yes | Needs ProductModel + block data |
-| Comparison Agent | ✅ Yes | Needs 2 ProductModels + comparison data |
-| Template Agent | ✅ Yes | Needs page data + template schema |
+```python
+from agents.llm_agents import QuestionGeneratorAgent
 
-**The Orchestrator is the ONLY component that:**
-- Creates agent instances
-- Passes data between agents
-- Controls execution order
-- Manages the DAG flow
+# Create agent (gets own LLM instance)
+agent = QuestionGeneratorAgent()
 
-Agents **never import or call each other directly**.
+# Run independently without orchestrator
+result = agent.run({
+    "productName": "Test Product",
+    "benefits": ["Brightening"],
+    "price": {"amount": 699, "currency": "INR"}
+})
+
+print(result)  # LLM-generated questions
+```
+
+| Agent | Purpose | LLM Calls |
+|-------|---------|-----------|
+| `QuestionGeneratorAgent` | Generate 21 categorized questions | ✅ Yes |
+| `FAQGeneratorAgent` | Generate FAQ answers | ✅ Yes |
+| `ProductPageAgent` | Generate product descriptions | ✅ Yes |
+| `ComparisonAgent` | Generate product comparisons | ✅ Yes |
 
 ---
 
-## 📄 Output Examples
+## 🔧 API Endpoints
 
-### faq.json (19 Q&As)
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/health` | GET | Health check |
+| `/api/run-pipeline` | POST | Run LangGraph pipeline |
+| `/api/outputs/faq` | GET | Get FAQ output |
+| `/api/outputs/product` | GET | Get Product output |
+| `/api/outputs/comparison` | GET | Get Comparison output |
+| `/api/system-info` | GET | Get architecture info |
 
-```json
-{
-  "productName": "GlowBoost Vitamin C Serum",
-  "generatedAt": "2025-12-09T10:00:00Z",
-  "totalQuestions": 19,
-  "faqs": [
-    {
-      "id": "faq-001",
-      "category": "informational",
-      "question": "What are the key ingredients in GlowBoost Vitamin C Serum?",
-      "answer": "The key ingredients in GlowBoost Vitamin C Serum are Vitamin C, Hyaluronic Acid."
-    },
-    {
-      "id": "faq-015",
-      "category": "purchase",
-      "question": "How much does GlowBoost Vitamin C Serum cost?",
-      "answer": "GlowBoost Vitamin C Serum is priced at ₹699."
-    }
-  ]
-}
+---
+
+## 📦 Dependencies
+
 ```
+# Core
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
 
-### product_page.json
+# LangGraph & LangChain
+langgraph>=0.0.40
+langchain>=0.1.0
+langchain-google-genai>=2.0.0
+langchain-core>=0.1.0
 
-```json
-{
-  "productName": "GlowBoost Vitamin C Serum",
-  "concentration": "10% Vitamin C",
-  "skinTypes": ["Oily", "Combination"],
-  "keyIngredients": ["Vitamin C", "Hyaluronic Acid"],
-  "benefits": {
-    "items": ["Brightening", "Fades dark spots"],
-    "primary": "Brightening",
-    "count": 2
-  },
-  "usage": {
-    "instructions": "Apply 2–3 drops in the morning before sunscreen",
-    "frequency": "morning",
-    "quantity": "2–3 drops",
-    "timing": "before sunscreen"
-  },
-  "price": { "amount": 699, "currency": "INR" }
-}
-```
+# API
+fastapi>=0.104.0
+uvicorn>=0.24.0
 
-### comparison_page.json
-
-```json
-{
-  "productA": {
-    "name": "GlowBoost Vitamin C Serum",
-    "price": 699,
-    "benefits": ["Brightening", "Fades dark spots"]
-  },
-  "productB": {
-    "name": "ClearGlow Niacinamide Serum",
-    "price": 799,
-    "benefits": ["Reduces pores", "Controls oil"]
-  },
-  "comparison": {
-    "commonIngredients": [],
-    "uniqueToA": ["Vitamin C", "Hyaluronic Acid"],
-    "uniqueToB": ["Niacinamide", "Salicylic Acid"],
-    "priceDifference": 100,
-    "cheaperProduct": "productA",
-    "recommendation": "GlowBoost Vitamin C Serum is more affordable by ₹100..."
-  }
-}
+# Environment
+python-dotenv>=1.0.0
 ```
 
 ---
 
-## ⚙️ Configuration
+## ☁️ Production Deployment & Scalability
 
-Set environment variables to customize:
+### 1. Containerization (Docker)
+
+Use the included `Dockerfile` to containerize the application:
 
 ```bash
-# Environment (development, staging, production)
-export PIPELINE_ENV=production
+# Build image
+docker build -t kasparro-agent .
 
-# Logging level
-export PIPELINE_LOG_LEVEL=WARNING
+# Run container (passing env vars)
+docker run -p 8000:8000 --env-file .env kasparro-agent
 ```
 
----
+### 2. Cloud Auto-Scaling (Google Cloud Run)
 
-## 📋 Requirements
-
-- Python 3.10+
-- pydantic >= 2.5.0
-- pydantic-settings >= 2.1.0
-- fastapi >= 0.104.0 (for API)
-- uvicorn >= 0.24.0 (for API)
-
----
-
-## �️ Frontend Dashboard
-
-A modern dark-themed dashboard to visualize the multi-agent system.
-
-### Local Development
+This stateless architecture is ideal for Serverless platforms like Cloud Run:
 
 ```bash
-# Start the backend API
-uvicorn api.main:app --reload --port 8000
-
-# Open frontend in browser
-# Open frontend/index.html directly, or use a local server:
-python -m http.server 3000 --directory frontend
+# Deploy to Cloud Run (scales to 0 when idle, up to N under load)
+gcloud run deploy kasparro-agent \
+  --source . \
+  --port 8000 \
+  --allow-unauthenticated \
+  --min-instances 0 \
+  --max-instances 10
 ```
 
-Then open http://localhost:3000 in your browser.
+> **Scalability Note:** Cloud Run automatically scales containers based on concurrent requests.
 
-### Features
-- 🎨 Modern dark theme with glassmorphism
-- 📊 Pipeline architecture visualization
-- ▶️ Run pipeline button with live execution log
-- 📋 Tab-based output viewer (FAQ, Product, Comparison)
-- 📦 Input product display
+### 3. Async Task Queue (Recommended for High Load)
+
+Since `run_pipeline` takes ~2 minutes (due to LLM rate limits), avoid blocking the API worker:
+
+1.  **Refactor Main Endpoint**: Convert `/api/run-pipeline` to use `FastAPI.BackgroundTasks` or **Celery**.
+    ```python
+    # Example Async Pattern
+    @app.post("/api/run-pipeline")
+    async def run_async(background_tasks: BackgroundTasks):
+        job_id = uuid4()
+        background_tasks.add_task(run_pipeline, job_id)
+        return {"job_id": job_id, "status": "processing"}
+    ```
+2.  **Worker Nodes**: Separate the API (receiver) from Worker Nodes (processors) using **Redis**.
+3.  **Concurrency**: Increase worker count to process multiple pipelines in parallel.
 
 ---
 
-## 🔌 REST API
+## 📈 Scalability Architecture
 
-FastAPI backend exposes the pipeline via REST endpoints.
+This system is designed to scale horizontally:
 
-### Endpoints
+| Aspect | Implementation | Scalability |
+|--------|---------------|-------------|
+| **LLM Providers** | Multi-provider factory | ✅ Easy to add new providers |
+| **Agents** | Independent self-contained classes | ✅ Easy to add new agent types |
+| **Graph Nodes** | Modular LangGraph nodes | ✅ Easy to add/modify pipeline steps |
+| **State** | TypedDict flows through graph | ✅ Easy to extend state fields |
+| **Templates** | JSON output templates | ✅ Easy to add new content types |
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/health` | Health check |
-| POST | `/api/run-pipeline` | Run the full pipeline |
-| GET | `/api/outputs/faq` | Get FAQ JSON output |
-| GET | `/api/outputs/product` | Get Product JSON output |
-| GET | `/api/outputs/comparison` | Get Comparison JSON output |
-| GET | `/api/products` | Get input product data |
-| GET | `/api/system-info` | Get system architecture info |
+**How to extend:**
 
-### Start API Server
+1. **Add new agent**: Create class in `agents/llm_agents.py` extending `BaseAgent`
+2. **Add new node**: Add function in `agents/nodes.py`, register in `agents/graph.py`
+3. **Add new output**: Add state field in `core/graph_state.py`, create template
+4. **Add new LLM provider**: Extend `core/llm_factory.py`
 
-```bash
-uvicorn api.main:app --reload --port 8000
-```
-
-API docs available at: http://localhost:8000/docs
-
----
-
-## 🚀 Deployment
-
-### Backend (Render.com - Recommended)
-
-1. Push code to GitHub
-2. Go to [render.com](https://render.com) → New → Web Service
-3. Connect your GitHub repo
-4. Settings:
-   - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `uvicorn api.main:app --host 0.0.0.0 --port $PORT`
-   - **Environment**: Python 3
-5. Click "Create Web Service"
-6. Copy your Render URL (e.g., `https://your-app.onrender.com`)
-
-### Frontend (Vercel)
-
-1. Update `frontend/app.js` line 7 with your Render backend URL:
-   ```javascript
-   const API_BASE_URL = 'https://your-app.onrender.com/api';
-   ```
-2. Push to GitHub
-3. Go to [vercel.com](https://vercel.com) → Import Project
-4. Select your repo
-5. Framework: Other
-6. Root Directory: `frontend`
-7. Deploy!
-
-### Alternative: Railway
-
-```bash
-# Install Railway CLI
-npm install -g @railway/cli
-
-# Login and deploy
-railway login
-railway init
-railway up
-```
+**For enterprise scale:**
+- Add message queues (Redis/RabbitMQ) for async processing
+- Add database storage instead of file-based outputs
+- Add caching layer for repeated LLM calls
+- Add monitoring (Prometheus/Grafana)
 
 ---
+
+## 📄 License
+
+MIT License - See [LICENSE](LICENSE) for details.

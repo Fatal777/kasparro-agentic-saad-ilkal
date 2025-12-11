@@ -1,45 +1,63 @@
 """
-FastAPI Backend - REST API to expose the multi-agent pipeline.
+FastAPI Backend - REST API with LangGraph Pipeline
+
+This API exposes the LangGraph-based multi-agent content generation system.
+Agents make actual LLM calls to generate content.
 
 Endpoints:
     GET  /api/health - Health check
-    POST /api/run-pipeline - Run the full pipeline
+    POST /api/run-pipeline - Run the LangGraph pipeline
     GET  /api/outputs/faq - Get FAQ output
     GET  /api/outputs/product - Get Product page output
     GET  /api/outputs/comparison - Get Comparison page output
     GET  /api/products - Get input product data
+    GET  /api/system-info - Get system architecture info
 """
 
 import json
-import sys
+import os
 from pathlib import Path
 from datetime import datetime
 from typing import Optional
 
-# Add project root
-PROJECT_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
-
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-# Import pipeline components
-from agents.orchestrator import Orchestrator
+# Load environment variables
+load_dotenv()
+
+# Import LangGraph pipeline
+from agents.graph import run_pipeline
+
+# Project paths
+PROJECT_ROOT = Path(__file__).parent.parent
 
 app = FastAPI(
-    title="Multi-Agent Content Generation API",
-    description="REST API for the agentic content generation system",
-    version="1.0.0"
+    title="Multi-Agent Content Generation API (LangGraph)",
+    description="REST API for the LangGraph-based agentic content generation system",
+    version="2.0.0"
 )
 
-# CORS for Vercel frontend
+# CORS configuration - secure defaults
+# Set ALLOWED_ORIGINS env var for production (comma-separated list)
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "").split(",")
+if not allowed_origins or allowed_origins == [""]:
+    # Development defaults - specific origins, not wildcard
+    allowed_origins = [
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:8000",
+    ]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Update with your Vercel domain in production
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 
@@ -54,10 +72,7 @@ class HealthResponse(BaseModel):
     status: str
     timestamp: str
     version: str
-
-
-# Store last run results
-_last_run: Optional[dict] = None
+    framework: str
 
 
 @app.get("/api/health", response_model=HealthResponse)
@@ -66,43 +81,50 @@ async def health_check():
     return HealthResponse(
         status="healthy",
         timestamp=datetime.utcnow().isoformat(),
-        version="1.0.0"
+        version="2.0.0",
+        framework="LangGraph"
     )
 
 
 @app.post("/api/run-pipeline", response_model=PipelineResponse)
-async def run_pipeline():
-    """Run the full multi-agent pipeline."""
-    global _last_run
+async def api_run_pipeline():
+    """
+    Run the full LangGraph multi-agent pipeline.
     
+    This makes actual LLM API calls to generate content.
+    Requires LLM_PROVIDER and appropriate API key in .env
+    """
     try:
-        start_time = datetime.utcnow()
+        provider = os.getenv("LLM_PROVIDER", "gemini")
         
-        orchestrator = Orchestrator(
-            data_dir=str(PROJECT_ROOT / "data"),
-            templates_dir=str(PROJECT_ROOT / "templates"),
-            output_dir=str(PROJECT_ROOT / "output")
-        )
+        # Check for API key based on provider
+        if provider == "gemini" and not os.getenv("GOOGLE_API_KEY"):
+            raise HTTPException(
+                status_code=500,
+                detail="GOOGLE_API_KEY not configured. Set it in .env file."
+            )
+        elif provider == "openai" and not os.getenv("OPENAI_API_KEY"):
+            raise HTTPException(
+                status_code=500,
+                detail="OPENAI_API_KEY not configured. Set it in .env file."
+            )
+        # Ollama doesn't need an API key
         
-        result = orchestrator.run()
-        
-        end_time = datetime.utcnow()
-        execution_time = (end_time - start_time).total_seconds() * 1000
-        
-        _last_run = result
+        # Run LangGraph pipeline
+        result = run_pipeline()
         
         if result["success"]:
             return PipelineResponse(
                 success=True,
-                pipeline_id=result.get("pipeline_id"),
-                message="Pipeline executed successfully",
-                execution_time_ms=execution_time
+                pipeline_id=datetime.now().strftime("%Y%m%d_%H%M%S"),
+                message="LangGraph pipeline executed successfully with LLM calls",
+                execution_time_ms=result.get("execution_time_ms")
             )
         else:
             return PipelineResponse(
                 success=False,
                 message=result.get("error", "Unknown error"),
-                execution_time_ms=execution_time
+                execution_time_ms=result.get("execution_time_ms")
             )
             
     except Exception as e:
@@ -111,11 +133,14 @@ async def run_pipeline():
 
 @app.get("/api/outputs/faq")
 async def get_faq_output():
-    """Get the FAQ page output."""
+    """Get the FAQ page output (LLM-generated)."""
     faq_path = PROJECT_ROOT / "output" / "faq.json"
     
     if not faq_path.exists():
-        raise HTTPException(status_code=404, detail="FAQ output not found. Run the pipeline first.")
+        raise HTTPException(
+            status_code=404, 
+            detail="FAQ output not found. Run the pipeline first via POST /api/run-pipeline"
+        )
     
     with open(faq_path, "r", encoding="utf-8") as f:
         return json.load(f)
@@ -123,11 +148,14 @@ async def get_faq_output():
 
 @app.get("/api/outputs/product")
 async def get_product_output():
-    """Get the Product page output."""
+    """Get the Product page output (LLM-generated)."""
     product_path = PROJECT_ROOT / "output" / "product_page.json"
     
     if not product_path.exists():
-        raise HTTPException(status_code=404, detail="Product output not found. Run the pipeline first.")
+        raise HTTPException(
+            status_code=404, 
+            detail="Product output not found. Run the pipeline first via POST /api/run-pipeline"
+        )
     
     with open(product_path, "r", encoding="utf-8") as f:
         return json.load(f)
@@ -135,11 +163,14 @@ async def get_product_output():
 
 @app.get("/api/outputs/comparison")
 async def get_comparison_output():
-    """Get the Comparison page output."""
+    """Get the Comparison page output (LLM-generated)."""
     comparison_path = PROJECT_ROOT / "output" / "comparison_page.json"
     
     if not comparison_path.exists():
-        raise HTTPException(status_code=404, detail="Comparison output not found. Run the pipeline first.")
+        raise HTTPException(
+            status_code=404, 
+            detail="Comparison output not found. Run the pipeline first via POST /api/run-pipeline"
+        )
     
     with open(comparison_path, "r", encoding="utf-8") as f:
         return json.load(f)
@@ -169,22 +200,32 @@ async def get_products():
 @app.get("/api/system-info")
 async def get_system_info():
     """Get system architecture info."""
+    provider = os.getenv("LLM_PROVIDER", "gemini")
+    
     return {
         "name": "Multi-Agent Content Generation System",
-        "architecture": "DAG-based orchestration",
+        "version": "2.0.0",
+        "framework": "LangGraph",
+        "architecture": "StateGraph DAG with LLM-powered independent agents",
+        "llm": {
+            "provider": provider.capitalize(),
+            "model": os.getenv("MODEL_NAME", "llama3.2" if provider == "ollama" else "gemini-1.5-flash"),
+            "configured": True if provider == "ollama" else bool(os.getenv("GOOGLE_API_KEY") or os.getenv("OPENAI_API_KEY"))
+        },
         "agents": [
-            {"name": "Parser Agent", "role": "Converts raw data to ProductModel"},
-            {"name": "Question Agent", "role": "Generates 15+ categorized questions"},
-            {"name": "FAQ Agent", "role": "Creates FAQ Q&A pairs"},
-            {"name": "Product Page Agent", "role": "Generates product description"},
-            {"name": "Comparison Agent", "role": "Compares Product A vs B"},
-            {"name": "Template Agent", "role": "Validates and writes JSON output"}
+            {"name": "QuestionGeneratorAgent", "type": "independent", "llm": True, "role": "Generate 21 questions via LLM"},
+            {"name": "FAQGeneratorAgent", "type": "independent", "llm": True, "role": "Generate FAQ answers via LLM"},
+            {"name": "ProductPageAgent", "type": "independent", "llm": True, "role": "Generate product page via LLM"},
+            {"name": "ComparisonAgent", "type": "independent", "llm": True, "role": "Generate comparison via LLM"},
         ],
-        "logicBlocks": [
-            {"name": "benefits_block", "role": "Extract & structure benefits"},
-            {"name": "usage_block", "role": "Parse usage instructions"},
-            {"name": "ingredient_block", "role": "Extract ingredient info"},
-            {"name": "comparison_block", "role": "Compare two products"}
+        "nodes": [
+            {"name": "parse_products", "role": "Parse raw product data", "llm": False},
+            {"name": "run_logic_blocks", "role": "Execute pure-function logic blocks", "llm": False},
+            {"name": "generate_questions", "role": "Invoke QuestionGeneratorAgent", "llm": True},
+            {"name": "generate_faq", "role": "Invoke FAQGeneratorAgent", "llm": True},
+            {"name": "generate_product", "role": "Invoke ProductPageAgent", "llm": True},
+            {"name": "generate_comparison", "role": "Invoke ComparisonAgent", "llm": True},
+            {"name": "write_outputs", "role": "Write JSON output files", "llm": False}
         ],
         "outputs": ["faq.json", "product_page.json", "comparison_page.json"]
     }

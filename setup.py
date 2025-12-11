@@ -8,14 +8,14 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
-    name="kasparro-agentic-content-generation",
-    version="1.0.0",
-    author="Your Name",
-    author_email="your.email@example.com",
-    description="Multi-Agent Content Generation System for product pages",
+    name="kasparro-agentic",
+    version="2.0.0",
+    author="Saad Ilkal",
+    author_email="saad@example.com",
+    description="LangGraph-powered multi-agent content generation system",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/kasparro-ai-agentic-content-generation-system",
+    url="https://github.com/Fatal777/kasparro-agentic",
     packages=find_packages(exclude=["tests*"]),
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -31,6 +31,13 @@ setup(
     install_requires=[
         "pydantic>=2.5.0",
         "pydantic-settings>=2.1.0",
+        "langgraph>=0.0.40",
+        "langchain>=0.1.0",
+        "langchain-google-genai>=2.0.0",
+        "langchain-core>=0.1.0",
+        "fastapi>=0.104.0",
+        "uvicorn>=0.24.0",
+        "python-dotenv>=1.0.0",
     ],
     extras_require={
         "dev": [
@@ -40,10 +47,16 @@ setup(
             "isort>=5.12.0",
             "mypy>=1.7.0",
         ],
+        "ollama": [
+            "langchain-ollama>=1.0.0",
+        ],
+        "openai": [
+            "langchain-openai>=0.0.5",
+        ],
     },
     entry_points={
         "console_scripts": [
-            "generate-content=agents.orchestrator:main",
+            "run-pipeline=agents.graph:run_pipeline",
         ],
     },
 )
