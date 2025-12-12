@@ -21,9 +21,11 @@ from datetime import datetime
 
 from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.messages import SystemMessage
 from langchain_core.output_parsers import JsonOutputParser
 
 from core.llm_factory import get_llm, get_provider_info
+from core.prompts import PromptLoader
 
 # Load environment
 load_dotenv()
@@ -45,16 +47,18 @@ class BaseAgent(ABC):
         self.provider_info = get_provider_info()
         self.created_at = datetime.now()
     
-    def _invoke_with_retry(self, chain, input_data: Dict, max_retries: int = 3):
-        """Invoke chain with retry logic for rate limiting."""
+    async def _ainvoke_with_retry(self, chain, input_data: Dict, max_retries: int = 3):
+        """Invoke chain asynchronously with retry logic for rate limiting."""
         for attempt in range(max_retries):
             try:
-                return chain.invoke(input_data)
+                return await chain.ainvoke(input_data)
             except Exception as e:
+                # Basic check for rate limits
                 if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
                     wait_time = (attempt + 1) * 15  # 15, 30, 45 seconds
                     self.log(f"Rate limited, waiting {wait_time}s (attempt {attempt + 1}/{max_retries})")
-                    time.sleep(wait_time)
+                    import asyncio
+                    await asyncio.sleep(wait_time)
                 else:
                     raise
         raise Exception(f"Failed after {max_retries} retries")
@@ -65,8 +69,8 @@ class BaseAgent(ABC):
         pass
     
     @abstractmethod
-    def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute the agent's task."""
+    async def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute the agent's task asynchronously."""
         pass
     
     def log(self, message: str):
@@ -78,7 +82,7 @@ class QuestionGeneratorAgent(BaseAgent):
     """
     Independent agent that generates categorized questions about a product.
     
-    Uses Gemini to intelligently create 21+ user questions across categories:
+    Uses LLM to intelligently create 21+ user questions across categories:
     - informational, safety, usage, purchase, comparison
     """
     
@@ -86,28 +90,15 @@ class QuestionGeneratorAgent(BaseAgent):
         super().__init__("QuestionGeneratorAgent")
     
     def get_system_prompt(self) -> str:
-        return """You are a product content expert specializing in skincare.
-Your job is to generate exactly 21 user questions about a product.
-
-IMPORTANT: You must generate questions that users would actually ask.
-Think like a customer who is considering buying this product.
-
-Categories and requirements:
-- informational (8 questions): About ingredients, what it does, how it works
-- safety (4 questions): Side effects, allergies, skin reactions
-- usage (4 questions): How to apply, when, frequency, amount
-- purchase (3 questions): Price, value, where to buy
-- comparison (2 questions): How it compares to alternatives
-
-Return ONLY valid JSON, no markdown or extra text."""
+        return PromptLoader.get_question_prompt()
     
-    def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Generate 21 categorized questions using LLM."""
         provider = self.provider_info.get("provider", "LLM")
         self.log(f"Starting question generation via {provider} API...")
         
         prompt = ChatPromptTemplate.from_messages([
-            ("system", self.get_system_prompt()),
+            SystemMessage(content=self.get_system_prompt()),
             ("human", """Generate 21 questions for this product:
 
 Product Name: {product_name}
@@ -124,7 +115,7 @@ Return JSON: {{"questions": [{{"category": "...", "question": "..."}}]}}""")
         
         chain = prompt | self.llm | JsonOutputParser()
         
-        result = chain.invoke({
+        result = await chain.ainvoke({
             "product_name": input_data.get("productName", ""),
             "concentration": input_data.get("concentration", ""),
             "ingredients": ", ".join(
@@ -148,7 +139,7 @@ class FAQGeneratorAgent(BaseAgent):
     """
     Independent agent that generates FAQ answers.
     
-    Takes questions and product data, uses Gemini to create
+    Takes questions and product data, uses LLM to create
     helpful, accurate answers based ONLY on provided data.
     """
     
@@ -156,18 +147,9 @@ class FAQGeneratorAgent(BaseAgent):
         super().__init__("FAQGeneratorAgent")
     
     def get_system_prompt(self) -> str:
-        return """You are a skincare product expert.
-Your job is to answer FAQ questions accurately and helpfully.
-
-RULES:
-1. Only use information provided - never make up facts
-2. Keep answers concise (1-2 sentences)
-3. Be helpful and customer-friendly
-4. Include specific details like ingredients, prices when relevant
-
-Return ONLY valid JSON, no markdown or extra text."""
+        return PromptLoader.get_faq_prompt()
     
-    def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Generate FAQ answers using LLM."""
         provider = self.provider_info.get("provider", "LLM")
         self.log(f"Starting FAQ generation via {provider} API...")
@@ -178,7 +160,7 @@ Return ONLY valid JSON, no markdown or extra text."""
         import json
         
         prompt = ChatPromptTemplate.from_messages([
-            ("system", self.get_system_prompt()),
+            SystemMessage(content=self.get_system_prompt()),
             ("human", """Create FAQ answers for these questions:
 
 Product Information:
@@ -204,7 +186,7 @@ Return JSON: {{
         
         chain = prompt | self.llm | JsonOutputParser()
         
-        result = chain.invoke({
+        result = await chain.ainvoke({
             "product_name": product.get("productName", ""),
             "concentration": product.get("concentration", ""),
             "ingredients": ", ".join(
@@ -230,31 +212,22 @@ class ProductPageAgent(BaseAgent):
     """
     Independent agent that generates product page content.
     
-    Creates rich, engaging product descriptions using Gemini.
+    Creates rich, engaging product descriptions using LLM.
     """
     
     def __init__(self):
         super().__init__("ProductPageAgent")
     
     def get_system_prompt(self) -> str:
-        return """You are a professional product content writer for skincare.
-Your job is to create engaging, informative product page content.
-
-RULES:
-1. Use only the provided product information
-2. Make content engaging but accurate
-3. Highlight key benefits and usage
-4. Structure content for easy reading
-
-Return ONLY valid JSON, no markdown or extra text."""
+        return PromptLoader.get_product_prompt()
     
-    def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Generate product page content using LLM."""
         provider = self.provider_info.get("provider", "LLM")
         self.log(f"Starting product page generation via {provider} API...")
         
         prompt = ChatPromptTemplate.from_messages([
-            ("system", self.get_system_prompt()),
+            SystemMessage(content=self.get_system_prompt()),
             ("human", """Create a product page for:
 
 Product Name: {product_name}
@@ -280,7 +253,7 @@ Return JSON: {{
         
         chain = prompt | self.llm | JsonOutputParser()
         
-        result = chain.invoke({
+        result = await chain.ainvoke({
             "product_name": input_data.get("productName", ""),
             "concentration": input_data.get("concentration", ""),
             "ingredients": ", ".join(
@@ -310,18 +283,9 @@ class ComparisonAgent(BaseAgent):
         super().__init__("ComparisonAgent")
     
     def get_system_prompt(self) -> str:
-        return """You are a skincare product comparison expert.
-Your job is to objectively compare two products and provide recommendations.
-
-RULES:
-1. Be objective and fair to both products
-2. Highlight genuine differences
-3. Give actionable recommendations
-4. Consider different user needs
-
-Return ONLY valid JSON, no markdown or extra text."""
+        return PromptLoader.get_comparison_prompt()
     
-    def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Generate product comparison using LLM."""
         provider = self.provider_info.get("provider", "LLM")
         self.log(f"Starting product comparison via {provider} API...")
@@ -330,7 +294,7 @@ Return ONLY valid JSON, no markdown or extra text."""
         product_b = input_data.get("productB", {})
         
         prompt = ChatPromptTemplate.from_messages([
-            ("system", self.get_system_prompt()),
+            SystemMessage(content=self.get_system_prompt()),
             ("human", """Compare these two skincare products:
 
 PRODUCT A:

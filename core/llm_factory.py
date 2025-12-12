@@ -18,9 +18,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+# Cache for LLM instances
+_llm_cache = {}
+
 def get_llm():
     """
     Get LLM based on configured provider.
+    Uses caching (Singleton pattern) to avoid re-initialization overhead.
     
     Environment variables:
         LLM_PROVIDER: gemini, ollama, or openai
@@ -32,17 +36,24 @@ def get_llm():
     model_name = os.getenv("MODEL_NAME", "")
     temperature = float(os.getenv("TEMPERATURE", "0"))
     
+    # Create cache key based on config
+    cache_key = f"{provider}:{model_name}:{temperature}"
+    
+    if cache_key in _llm_cache:
+        return _llm_cache[cache_key]
+    
+    llm = None
     if provider == "ollama":
         # FREE local LLM - no API key required
         from langchain_ollama import ChatOllama
-        return ChatOllama(
+        llm = ChatOllama(
             model=model_name or "llama3.2",
             temperature=temperature
         )
     
     elif provider == "openai":
         from langchain_openai import ChatOpenAI
-        return ChatOpenAI(
+        llm = ChatOpenAI(
             model=model_name or "gpt-4o-mini",
             temperature=temperature,
             api_key=os.getenv("OPENAI_API_KEY")
@@ -50,13 +61,16 @@ def get_llm():
     
     else:  # Default: gemini
         from langchain_google_genai import ChatGoogleGenerativeAI
-        return ChatGoogleGenerativeAI(
+        llm = ChatGoogleGenerativeAI(
             model=model_name or "gemini-1.5-flash",
             temperature=temperature,
             google_api_key=os.getenv("GOOGLE_API_KEY"),
             convert_system_message_to_human=True,
             max_retries=3
         )
+        
+    _llm_cache[cache_key] = llm
+    return llm
 
 
 def get_provider_info() -> dict:

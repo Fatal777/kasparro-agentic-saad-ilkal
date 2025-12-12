@@ -10,7 +10,7 @@ RATE LIMIT PROTECTION:
 """
 
 import json
-import time
+import asyncio
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any
@@ -34,10 +34,11 @@ RATE_LIMIT_DELAY = 15
 
 def with_rate_limit(node_func, delay: int = RATE_LIMIT_DELAY):
     """Wrapper to add delay after LLM node execution."""
-    def wrapped(state: AgentState) -> Dict[str, Any]:
-        result = node_func(state)
+    async def wrapped(state: AgentState) -> Dict[str, Any]:
+        # Await the async node function
+        result = await node_func(state)
         print(f"  ⏳ Waiting {delay}s to avoid rate limits...")
-        time.sleep(delay)
+        await asyncio.sleep(delay)
         return result
     return wrapped
 
@@ -45,60 +46,18 @@ def with_rate_limit(node_func, delay: int = RATE_LIMIT_DELAY):
 def build_pipeline_graph() -> StateGraph:
     """
     Build the LangGraph pipeline with SEQUENTIAL LLM execution.
-    
-    To avoid rate limits, LLM nodes run one at a time with delays:
-    
-        [START]
-           │
-           ▼
-    ┌──────────────┐
-    │ parse_products│  (no LLM)
-    └──────────────┘
-           │
-           ▼
-    ┌──────────────┐
-    │run_logic_blocks│  (no LLM)
-    └──────────────┘
-           │
-           ▼
-    ┌──────────────────┐
-    │generate_questions │  🤖 LLM (wait 15s)
-    └──────────────────┘
-           │
-           ▼
-    ┌──────────────────┐
-    │  generate_faq     │  🤖 LLM (wait 15s)
-    └──────────────────┘
-           │
-           ▼
-    ┌──────────────────┐
-    │ generate_product  │  🤖 LLM (wait 15s)
-    └──────────────────┘
-           │
-           ▼
-    ┌────────────────────┐
-    │generate_comparison │  🤖 LLM (wait 15s)
-    └────────────────────┘
-           │
-           ▼
-    ┌──────────────┐
-    │ write_outputs │  (no LLM)
-    └──────────────┘
-           │
-           ▼
-        [END]
     """
     
     # Create the graph with our state type
     graph = StateGraph(AgentState)
     
     # Add nodes
-    # Non-LLM nodes (no delay needed)
+    # Non-LLM nodes (sync)
     graph.add_node("parse_products", parse_products_node)
     graph.add_node("run_logic_blocks", run_logic_blocks_node)
     graph.add_node("write_outputs", write_outputs_node)
     
-    # LLM nodes with rate limiting (wrapped with delay)
+    # LLM nodes with rate limiting (async wrapped)
     graph.add_node("generate_questions", with_rate_limit(generate_questions_node))
     graph.add_node("generate_faq", with_rate_limit(generate_faq_node))
     graph.add_node("generate_product", with_rate_limit(generate_product_node))
@@ -126,18 +85,28 @@ def load_product_data() -> tuple[Dict[str, Any], Dict[str, Any]]:
     """Load product data from JSON files."""
     data_dir = Path("data")
     
-    with open(data_dir / "product_data.json", "r", encoding="utf-8") as f:
-        product_a = json.load(f)
+    # Create dummy data if files don't exist (robustness)
+    if not data_dir.exists():
+        return {}, {}
     
-    with open(data_dir / "product_b_data.json", "r", encoding="utf-8") as f:
-        product_b = json.load(f)
+    try:
+        with open(data_dir / "product_data.json", "r", encoding="utf-8") as f:
+            product_a = json.load(f)
+    except FileNotFoundError:
+        product_a = {}
+        
+    try:
+        with open(data_dir / "product_b_data.json", "r", encoding="utf-8") as f:
+            product_b = json.load(f)
+    except FileNotFoundError:
+        product_b = {}
     
     return product_a, product_b
 
 
-def run_pipeline() -> Dict[str, Any]:
+async def run_pipeline() -> Dict[str, Any]:
     """
-    Run the complete LangGraph pipeline.
+    Run the complete LangGraph pipeline asynchronously.
     
     Returns:
         Final state with all generated outputs
@@ -176,8 +145,8 @@ def run_pipeline() -> Dict[str, Any]:
     print("[Pipeline] 4 LLM calls with 15s delays = ~1 minute total\n")
     start_time = datetime.now()
     
-    # Execute the graph
-    final_state = graph.invoke(initial_state)
+    # Execute the graph asynchronously
+    final_state = await graph.ainvoke(initial_state)
     
     end_time = datetime.now()
     duration_ms = (end_time - start_time).total_seconds() * 1000
@@ -208,4 +177,5 @@ def run_pipeline() -> Dict[str, Any]:
 
 
 if __name__ == "__main__":
-    run_pipeline()
+    import asyncio
+    asyncio.run(run_pipeline())
